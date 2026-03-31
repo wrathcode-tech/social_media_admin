@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply antialiased bg-gray-100 text-gray-900 dark:bg-zinc-950 dark:text-zinc-100;
+  }
+}
+
+@layer utilities {
+  .visually-hidden {
+    @apply sr-only;
+  }
+}
