@@ -60,7 +60,10 @@ export default function NotificationsPage() {
     }
   };
 
-  const previewBanner = scope === 'banner' && bannerText ? bannerText : 'Announcement preview text';
+  const previewStripText =
+    scope === 'banner'
+      ? bannerText.trim() || 'Banner text — type above to preview'
+      : title.trim() || 'Push title will appear in the tray';
 
   return (
     <PageShell>
@@ -112,19 +115,36 @@ export default function NotificationsPage() {
         </Card>
         <Card className="shadow-lg" padding="p-4 md:p-6">
           <h2 className="text-lg font-semibold dark:text-zinc-50">Banner preview</h2>
-          <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 shadow-md dark:border-zinc-700">
-            <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-4 py-3 text-center text-sm font-medium text-white">
-              {previewBanner}
+          <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
+            In-app banner strip + feed context (approximate layout).
+          </p>
+          <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 shadow-md dark:border-zinc-700">
+            <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-4 py-3 text-center text-sm font-medium leading-snug text-white shadow-inner">
+              {previewStripText}
             </div>
-            <div className="relative space-y-2 overflow-hidden bg-white p-4 dark:bg-zinc-900">
-              <img
-                src="https://picsum.photos/seed/banner-feed-preview/400/200"
-                alt=""
-                className="absolute inset-0 h-full w-full object-cover opacity-20 dark:opacity-15"
-              />
-              <div className="relative space-y-2">
-                <div className="h-2 w-3/4 rounded-lg bg-gray-200/90 dark:bg-zinc-700/90" />
-                <div className="h-2 w-1/2 rounded-lg bg-gray-200/90 dark:bg-zinc-700/90" />
+            <div className="relative min-h-[200px] bg-gradient-to-b from-gray-100 to-white p-4 dark:from-zinc-800 dark:to-zinc-900">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(59,130,246,0.12),transparent),radial-gradient(ellipse_60%_40%_at_100%_50%,rgba(139,92,246,0.08),transparent)] dark:bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(59,130,246,0.15),transparent),radial-gradient(ellipse_60%_40%_at_100%_50%,rgba(139,92,246,0.1),transparent)]" />
+              <div className="relative flex min-h-[168px] flex-col gap-4">
+                <div className="flex gap-3 rounded-xl border border-gray-200/80 bg-white/90 p-3 shadow-sm backdrop-blur-sm dark:border-zinc-600 dark:bg-zinc-900/90">
+                  <div className="h-11 w-11 shrink-0 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 dark:from-zinc-600 dark:to-zinc-500" />
+                  <div className="min-w-0 flex-1 space-y-2 pt-0.5">
+                    <div className="h-2.5 w-28 rounded-md bg-gray-300 dark:bg-zinc-600" />
+                    <div className="h-2 w-full max-w-[95%] rounded bg-gray-200 dark:bg-zinc-700" />
+                    <div className="h-2 w-full max-w-[80%] rounded bg-gray-200 dark:bg-zinc-700" />
+                  </div>
+                </div>
+                <div className="flex gap-3 rounded-xl border border-dashed border-gray-300/90 bg-white/60 p-3 dark:border-zinc-600 dark:bg-zinc-900/60">
+                  <div className="h-11 w-11 shrink-0 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-zinc-700 dark:to-zinc-600" />
+                  <div className="min-w-0 flex-1 space-y-2 pt-0.5">
+                    <div className="h-2.5 w-24 rounded-md bg-gray-200 dark:bg-zinc-600" />
+                    <div className="h-2 w-full max-w-[70%] rounded bg-gray-100 dark:bg-zinc-800" />
+                  </div>
+                </div>
+                {scope === 'banner' && body.trim() ? (
+                  <p className="relative text-center text-xs text-gray-600 dark:text-zinc-400">
+                    Push body is separate; banner uses the strip only.
+                  </p>
+                ) : null}
               </div>
             </div>
           </div>

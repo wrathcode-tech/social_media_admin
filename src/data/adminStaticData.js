@@ -615,6 +615,17 @@ export function buildStaticSeed() {
     ];
   });
 
+  const growthWeeklyPoints = growthPoints(14, 100);
+  const analyticsEngagementSeries = growthWeeklyPoints.map((p, i) => ({
+    name: new Date(p.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }),
+    dau: Math.round(11800 + Math.sin(i * 0.45) * 900 + i * 40),
+    signups: p.newSignups,
+  }));
+  const analyticsRetentionSeries = Array.from({ length: 8 }, (_, i) => ({
+    name: i === 0 ? 'Week 0' : `Week ${i}`,
+    pct: Math.max(14, Math.round(100 * Math.pow(0.81, i) + (i % 3) * 4)),
+  }));
+
   return {
     summary: {
       totalUsers: 48291,
@@ -627,9 +638,11 @@ export function buildStaticSeed() {
     },
     growth: {
       daily: growthPoints(7, 80),
-      weekly: growthPoints(14, 100),
+      weekly: growthWeeklyPoints,
       monthly: growthPoints(30, 90),
     },
+    analyticsEngagementSeries,
+    analyticsRetentionSeries,
     users,
     posts,
     reels,

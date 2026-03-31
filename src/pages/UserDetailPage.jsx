@@ -212,11 +212,10 @@ export default function UserDetailPage() {
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className={`shrink-0 border-b-2 px-4 py-3 text-sm font-semibold capitalize transition-all duration-200 ${
-              tab === t
+            className={`shrink-0 border-b-2 px-4 py-3 text-sm font-semibold capitalize transition-all duration-200 ${tab === t
                 ? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400'
                 : 'border-transparent text-gray-500 dark:text-zinc-400'
-            }`}
+              }`}
           >
             {t}
           </button>

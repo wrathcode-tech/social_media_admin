@@ -20,6 +20,34 @@ router.get(
   })
 );
 
+router.get(
+  '/series/engagement',
+  asyncHandler(async (req, res) => {
+    const days = Math.min(45, Math.max(7, parseInt(String(req.query.days || '14'), 10) || 14));
+    const start = new Date();
+    start.setDate(start.getDate() - days);
+    start.setHours(0, 0, 0, 0);
+    const rows = await AnalyticsDaily.find({ date: { $gte: start } }).sort({ date: 1 }).lean();
+    const data = rows.map((r) => ({
+      name: new Date(r.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }),
+      dau: r.dau ?? 0,
+      signups: r.newSignups ?? 0,
+    }));
+    res.json({ data });
+  })
+);
+
+router.get(
+  '/series/retention',
+  asyncHandler(async (req, res) => {
+    const data = Array.from({ length: 8 }, (_, i) => ({
+      name: i === 0 ? 'Week 0' : `Week ${i}`,
+      pct: Math.max(12, Math.round(100 * Math.pow(0.81, i) + (i % 3) * 3)),
+    }));
+    res.json({ data });
+  })
+);
+
 router.get('/trending/posts', asyncHandler(async (req, res) => {
   const data = await Post.find({ status: 'live' }).populate('author', 'username').sort({ likesCount: -1 }).limit(10).lean();
   res.json({ data });

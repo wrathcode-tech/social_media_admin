@@ -289,18 +289,22 @@ export async function adminGetAnalyticsBundle() {
     const rt = getStaticRuntime();
     return {
       overview: rt.analyticsOverview,
+      engagementSeries: { data: rt.analyticsEngagementSeries || [] },
+      retentionSeries: { data: rt.analyticsRetentionSeries || [] },
       trendingPosts: { data: rt.trendingPosts },
       trendingReels: { data: rt.trendingReels },
       hashtags: { data: rt.hashtags },
     };
   }
-  const [overview, trendingPosts, trendingReels, hashtags] = await Promise.all([
+  const [overview, engagementSeries, retentionSeries, trendingPosts, trendingReels, hashtags] = await Promise.all([
     getJson('/admin/analytics/overview'),
+    getJson('/admin/analytics/series/engagement'),
+    getJson('/admin/analytics/series/retention'),
     getJson('/admin/analytics/trending/posts'),
     getJson('/admin/analytics/trending/reels'),
     getJson('/admin/analytics/trending/hashtags'),
   ]);
-  return { overview, trendingPosts, trendingReels, hashtags };
+  return { overview, engagementSeries, retentionSeries, trendingPosts, trendingReels, hashtags };
 }
 
 export async function adminGetSettingsApp() {
