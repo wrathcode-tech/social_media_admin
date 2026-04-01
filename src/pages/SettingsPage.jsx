@@ -39,7 +39,7 @@ export default function SettingsPage() {
       {err ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{err}</div> : null}
       <Card className="shadow-lg" padding="p-4 md:p-6">
         <h2 className="text-lg font-semibold dark:text-zinc-50">App</h2>
-        <label className="mt-4 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+        <label className="mt-4 block text-sm gap-2 flex flex-row items-center font-medium text-gray-700 dark:text-zinc-300">
           App name
           <input
             defaultValue={settings.appName || ''}
