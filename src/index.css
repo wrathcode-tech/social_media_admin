@@ -12,4 +12,77 @@
   .visually-hidden {
     @apply sr-only;
   }
+
+  /*
+   * Scrollbars only on hover — applies anywhere Tailwind overflow scroll utilities are used
+   * (main, sidebar nav, modals, tables, tabs, command palette, etc.)
+   */
+  .overflow-auto,
+  .overflow-x-auto,
+  .overflow-y-auto,
+  .overflow-scroll,
+  .overflow-x-scroll,
+  .overflow-y-scroll {
+    scrollbar-width: none;
+  }
+  .overflow-auto:hover,
+  .overflow-x-auto:hover,
+  .overflow-y-auto:hover,
+  .overflow-scroll:hover,
+  .overflow-x-scroll:hover,
+  .overflow-y-scroll:hover {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(203 213 225) transparent;
+  }
+  .dark .overflow-auto:hover,
+  .dark .overflow-x-auto:hover,
+  .dark .overflow-y-auto:hover,
+  .dark .overflow-scroll:hover,
+  .dark .overflow-x-scroll:hover,
+  .dark .overflow-y-scroll:hover {
+    scrollbar-color: rgb(82 82 91) transparent;
+  }
+  .overflow-auto::-webkit-scrollbar,
+  .overflow-x-auto::-webkit-scrollbar,
+  .overflow-y-auto::-webkit-scrollbar,
+  .overflow-scroll::-webkit-scrollbar,
+  .overflow-x-scroll::-webkit-scrollbar,
+  .overflow-y-scroll::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+  .overflow-auto:hover::-webkit-scrollbar,
+  .overflow-x-auto:hover::-webkit-scrollbar,
+  .overflow-y-auto:hover::-webkit-scrollbar,
+  .overflow-scroll:hover::-webkit-scrollbar,
+  .overflow-x-scroll:hover::-webkit-scrollbar,
+  .overflow-y-scroll:hover::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .overflow-auto:hover::-webkit-scrollbar-thumb,
+  .overflow-x-auto:hover::-webkit-scrollbar-thumb,
+  .overflow-y-auto:hover::-webkit-scrollbar-thumb,
+  .overflow-scroll:hover::-webkit-scrollbar-thumb,
+  .overflow-x-scroll:hover::-webkit-scrollbar-thumb,
+  .overflow-y-scroll:hover::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background-color: rgb(203 213 225);
+  }
+  .dark .overflow-auto:hover::-webkit-scrollbar-thumb,
+  .dark .overflow-x-auto:hover::-webkit-scrollbar-thumb,
+  .dark .overflow-y-auto:hover::-webkit-scrollbar-thumb,
+  .dark .overflow-scroll:hover::-webkit-scrollbar-thumb,
+  .dark .overflow-x-scroll:hover::-webkit-scrollbar-thumb,
+  .dark .overflow-y-scroll:hover::-webkit-scrollbar-thumb {
+    background-color: rgb(82 82 91);
+  }
+  .overflow-auto:hover::-webkit-scrollbar-track,
+  .overflow-x-auto:hover::-webkit-scrollbar-track,
+  .overflow-y-auto:hover::-webkit-scrollbar-track,
+  .overflow-scroll:hover::-webkit-scrollbar-track,
+  .overflow-x-scroll:hover::-webkit-scrollbar-track,
+  .overflow-y-scroll:hover::-webkit-scrollbar-track {
+    background: transparent;
+  }
 }

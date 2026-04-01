@@ -29,7 +29,19 @@ export const adminNavSections = [
     items: [
       { to: '/notifications', label: 'Notifications', keywords: 'push campaigns' },
       { to: '/ads', label: 'Ads', keywords: 'advertising placements' },
-      { to: '/finance', label: 'Finance', keywords: 'payouts transactions' },
+      {
+        label: 'Finance',
+        keywords: 'payouts transactions wallet ledger finance',
+        pathPrefix: '/finance',
+        children: [
+          { to: '/finance', label: 'Overview', end: true, keywords: 'payouts withdrawals ledger' },
+          {
+            to: '/finance/ad-payments',
+            label: 'Ad payments',
+            keywords: 'wallet topup user requests promoted ads payment queue',
+          },
+        ],
+      },
     ],
   },
   {
@@ -42,7 +54,18 @@ export function flattenNavItems() {
   const out = [];
   adminNavSections.forEach((sec) => {
     sec.items.forEach((item) => {
-      out.push({ ...item, section: sec.title });
+      if (item.children?.length) {
+        item.children.forEach((child) => {
+          out.push({
+            ...child,
+            section: sec.title,
+            label: `${item.label} — ${child.label}`,
+            keywords: `${item.keywords || ''} ${child.keywords || ''}`.trim(),
+          });
+        });
+      } else {
+        out.push({ ...item, section: sec.title });
+      }
     });
   });
   return out;

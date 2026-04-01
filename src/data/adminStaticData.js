@@ -445,6 +445,8 @@ export function buildStaticSeed() {
       scope: 'global',
       status: 'sent',
       bannerText: '',
+      scheduledAt: '',
+      targetUserIds: [],
       createdAt: day(7),
     },
     {
@@ -454,6 +456,8 @@ export function buildStaticSeed() {
       scope: 'users',
       status: 'draft',
       bannerText: '',
+      scheduledAt: '',
+      targetUserIds: [IDS.u5, IDS.u6],
       createdAt: day(2),
     },
     {
@@ -463,6 +467,8 @@ export function buildStaticSeed() {
       scope: 'banner',
       status: 'scheduled',
       bannerText: 'Brief downtime tonight 2–3 AM IST',
+      scheduledAt: day(0),
+      targetUserIds: [],
       createdAt: day(1),
     },
   ];
@@ -494,6 +500,53 @@ export function buildStaticSeed() {
       imageUrl: 'https://picsum.photos/seed/adbrand/320/200',
       linkUrl: 'https://example.com/brand',
       createdAt: day(30),
+    },
+  ];
+
+  /** User-initiated wallet top-ups for promoted ads (awaiting admin / payment verification). */
+  const adPaymentRequests = [
+    {
+      _id: 'f17f1f77bcf86cd799439c01',
+      user: author(IDS.u3),
+      amount: 2500,
+      currency: 'INR',
+      status: 'pending',
+      purpose: 'Promoted posts',
+      externalRef: 'rzp_ord_ad_001',
+      createdAt: day(0),
+    },
+    {
+      _id: 'f17f1f77bcf86cd799439c02',
+      user: author(IDS.u7),
+      amount: 10000,
+      currency: 'INR',
+      status: 'pending',
+      purpose: 'Reels boost',
+      externalRef: 'rzp_ord_ad_002',
+      createdAt: day(1),
+    },
+    {
+      _id: 'f17f1f77bcf86cd799439c03',
+      user: author(IDS.u8),
+      amount: 500,
+      currency: 'INR',
+      status: 'approved',
+      purpose: 'Ad wallet',
+      externalRef: 'rzp_ord_ad_003',
+      createdAt: day(5),
+      processedAt: day(4),
+    },
+    {
+      _id: 'f17f1f77bcf86cd799439c04',
+      user: author(IDS.u9),
+      amount: 200000,
+      currency: 'INR',
+      status: 'rejected',
+      purpose: 'Campaign',
+      externalRef: 'rzp_ord_ad_004',
+      createdAt: day(6),
+      processedAt: day(5),
+      rejectReason: 'Exceeds per-user daily top-up limit',
     },
   ];
 
@@ -651,6 +704,7 @@ export function buildStaticSeed() {
     reports,
     notifications,
     ads,
+    adPaymentRequests,
     payouts,
     transactions,
     admins,

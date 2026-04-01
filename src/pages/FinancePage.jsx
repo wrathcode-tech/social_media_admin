@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { adminGetFinancePayouts, adminGetFinanceTransactions, adminPatchPayout } from '../services/adminQueries';
 import PageShell from '../components/ui/PageShell';
 import PageHeader from '../components/ui/PageHeader';
@@ -37,7 +38,17 @@ export default function FinancePage() {
 
   return (
     <PageShell>
-      <PageHeader title="Finance" description="Payouts and ledger." />
+      <PageHeader
+        title="Finance"
+        description={
+          <span>
+            Payouts and ledger.{' '}
+            <Link to="/finance/ad-payments" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+              User ad payment requests →
+            </Link>
+          </span>
+        }
+      />
       {err ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{err}</div> : null}
       <Card className="shadow-lg" padding="p-0 overflow-hidden">
         <div className="border-b border-gray-100 px-4 py-3 dark:border-zinc-800">

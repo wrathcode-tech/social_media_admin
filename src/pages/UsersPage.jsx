@@ -13,6 +13,61 @@ import { TableRowSkeleton } from '../components/ui/Skeleton';
 import MediaThumb from '../components/ui/MediaThumb';
 import { userAvatarUrl } from '../lib/placeholders';
 
+function IconEye({ className = 'h-5 w-5' }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+      />
+    </svg>
+  );
+}
+
+function IconUserProfile({ className = 'h-5 w-5' }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+      />
+    </svg>
+  );
+}
+
+function UserListRowActions({ user, onQuickView, align = 'end' }) {
+  const labelBase = user?.username ? `@${user.username}` : 'user';
+  return (
+    <div className={`flex items-center gap-1 ${align === 'end' ? 'justify-end' : 'justify-start'}`}>
+      <button
+        type="button"
+        aria-label={`Quick view ${labelBase}`}
+        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-violet-600 transition-colors hover:bg-violet-50 hover:text-violet-700 dark:text-violet-400 dark:hover:bg-violet-950/40 dark:hover:text-violet-300"
+        onClick={() => onQuickView(user)}
+      >
+        <IconEye />
+      </button>
+      <Link
+        to={`/users/${user._id}`}
+        aria-label={`Open profile ${labelBase}`}
+        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-950/40 dark:hover:text-blue-300"
+      >
+        <IconUserProfile />
+      </Link>
+    </div>
+  );
+}
+
 function downloadUserCsv(rows) {
   const headers = ['username', 'email', 'followers', 'status'];
   const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
@@ -214,19 +269,7 @@ export default function UsersPage() {
                     <Badge tone={tone(u.status)}>{u.status}</Badge>
                   </Td>
                   <Td className="text-right">
-                    <button
-                      type="button"
-                      className="mr-3 text-sm font-semibold text-violet-600 hover:text-violet-700 dark:text-violet-400"
-                      onClick={() => setPreview(u)}
-                    >
-                      Quick view
-                    </button>
-                    <Link
-                      to={`/users/${u._id}`}
-                      className="text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400"
-                    >
-                      Profile
-                    </Link>
+                    <UserListRowActions user={u} onQuickView={setPreview} />
                   </Td>
                 </Tr>
               ))
@@ -264,17 +307,8 @@ export default function UsersPage() {
                     </span>
                     <Badge tone={tone(u.status)}>{u.status}</Badge>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-3 border-t border-gray-100 pt-3 dark:border-zinc-800">
-                    <button
-                      type="button"
-                      className="text-sm font-semibold text-violet-600 dark:text-violet-400"
-                      onClick={() => setPreview(u)}
-                    >
-                      Quick view
-                    </button>
-                    <Link to={`/users/${u._id}`} className="text-sm font-semibold text-blue-600 dark:text-blue-400">
-                      Profile
-                    </Link>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3 dark:border-zinc-800">
+                    <UserListRowActions user={u} onQuickView={setPreview} align="start" />
                   </div>
                 </div>
               </div>

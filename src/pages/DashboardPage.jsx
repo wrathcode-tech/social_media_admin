@@ -5,7 +5,6 @@ import {
   adminGetDashboardSummary,
   adminGetReportsQueue,
 } from '../services/adminQueries';
-import { barHeightClass } from '../lib/chartBars';
 import PageShell from '../components/ui/PageShell';
 import PageHeader from '../components/ui/PageHeader';
 import StatCard from '../components/ui/StatCard';
@@ -33,15 +32,6 @@ function fallbackSignupPoints(range) {
     const newSignups = Math.round(58 + Math.sin(i * 0.55) * 32 + i * 3.2 + ((i * 11) % 17));
     return { date: d.toISOString(), newSignups: Math.max(14, newSignups) };
   });
-}
-
-function bucketDateLabel(dateStr, index, total) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return '';
-  const step = total > 20 ? 5 : total > 12 ? 2 : 1;
-  if (index % step !== 0 && index !== total - 1) return '';
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 function iconUsers() {
@@ -131,10 +121,6 @@ export default function DashboardPage() {
 
   const points =
     Array.isArray(growth?.points) && growth.points.length > 0 ? growth.points : fallbackSignupPoints(range);
-  const maxSig = points.length ? Math.max(...points.map((p) => p.newSignups || 0), 1) : 1;
-  const bars = points.map((p) =>
-    barHeightClass(Math.min(100, ((p.newSignups || 0) / maxSig) * 100 || 8))
-  );
   const totalSignupsRange = points.reduce((s, p) => s + (Number(p.newSignups) || 0), 0);
 
   return (
@@ -241,53 +227,45 @@ export default function DashboardPage() {
         <Card className="shadow-lg lg:col-span-2">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-50">Signup velocity</h2>
-              <p className="text-sm text-gray-500 dark:text-zinc-400">New registrations per bucket</p>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-50">New signups</h2>
+              <p className="text-sm text-gray-500 dark:text-zinc-400">Per period (matches range above)</p>
               {!loading ? (
                 <p className="mt-1 text-sm font-semibold tabular-nums text-gray-800 dark:text-zinc-200">
-                  {totalSignupsRange.toLocaleString()} new users in this range
+                  {totalSignupsRange.toLocaleString()} total in this range
                 </p>
               ) : null}
             </div>
           </div>
           {loading ? (
-            <Skeleton className="mt-4 h-52 w-full rounded-xl" />
+            <Skeleton className="mt-4 h-48 w-full rounded-xl" />
           ) : (
-            <div className="mt-4 rounded-xl bg-gradient-to-b from-gray-50 to-gray-100/80 p-3 pt-2 dark:from-zinc-800/50 dark:to-zinc-900/80 sm:p-4">
-              <div className="flex h-[11.5rem] items-stretch gap-1 sm:gap-1.5 sm:h-52">
-                {bars.map((cls, i) => {
-                  const pt = points[i];
-                  const n = pt?.newSignups;
-                  const countLabel = typeof n === 'number' && !Number.isNaN(n) ? n.toLocaleString() : '—';
-                  const titleDate = pt?.date
-                    ? new Date(pt.date).toLocaleDateString(undefined, {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })
-                    : '';
-                  const xLabel = bucketDateLabel(pt?.date, i, points.length);
-                  return (
-                    <div key={i} className="flex min-h-0 min-w-0 flex-1 flex-col justify-end">
-                      <div
-                        className="flex min-h-0 flex-1 flex-col items-stretch justify-end gap-0.5"
-                        title={titleDate ? `${titleDate}: ${countLabel} signups` : undefined}
-                      >
-                        <div className="shrink-0 text-center text-[9px] font-semibold tabular-nums leading-none text-gray-800 dark:text-zinc-200 sm:text-[10px]">
-                          {countLabel}
-                        </div>
-                        <div
-                          className={`min-h-[6px] w-full rounded-t-md bg-gradient-to-t from-blue-600 via-indigo-500 to-violet-400 opacity-90 shadow-sm transition-all duration-300 ease-out hover:scale-[1.02] hover:opacity-100 ${cls}`}
-                        />
-                      </div>
-                      <div className="h-8 shrink-0 pt-1 text-center text-[9px] leading-tight text-gray-500 dark:text-zinc-500 sm:h-9 sm:text-[10px]">
-                        {xLabel || '\u00a0'}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+            <div className="mt-4 max-h-52 overflow-y-auto rounded-xl border border-gray-100 dark:border-zinc-800">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:bg-zinc-900 dark:text-zinc-400">
+                  <tr>
+                    <th className="px-3 py-2">Date</th>
+                    <th className="px-3 py-2 text-right">Signups</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
+                  {points.map((pt, i) => (
+                    <tr key={i} className="bg-white/80 dark:bg-zinc-950/40">
+                      <td className="px-3 py-2 text-gray-700 dark:text-zinc-300">
+                        {pt?.date
+                          ? new Date(pt.date).toLocaleDateString(undefined, {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric',
+                            })
+                          : '—'}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums font-medium text-gray-900 dark:text-zinc-100">
+                        {typeof pt?.newSignups === 'number' ? pt.newSignups.toLocaleString() : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </Card>

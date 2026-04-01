@@ -7,11 +7,14 @@ import {
   adminGetUserLoginHistory,
   adminPatchUserBlock,
   adminPatchUserUnblock,
+  adminPostUserAdCredit,
 } from '../services/adminQueries';
 import PageShell from '../components/ui/PageShell';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
+import Modal from '../components/ui/Modal';
+import { TextField } from '../components/ui/TextField';
 import { useToast } from '../context/ToastContext';
 import MediaThumb from '../components/ui/MediaThumb';
 import { userAvatarUrl } from '../lib/placeholders';
@@ -63,6 +66,10 @@ export default function UserDetailPage() {
   const [activity, setActivity] = useState([]);
   const [tab, setTab] = useState('profile');
   const [err, setErr] = useState('');
+  const [adCreditOpen, setAdCreditOpen] = useState(false);
+  const [adCreditAmount, setAdCreditAmount] = useState('');
+  const [adCreditNote, setAdCreditNote] = useState('');
+  const [adCreditSaving, setAdCreditSaving] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -91,6 +98,32 @@ export default function UserDetailPage() {
       () => toast('Could not copy', 'error')
     );
   };
+
+  const submitAdCredit = async (e) => {
+    e.preventDefault();
+    if (!userId || user?.status === 'blocked') return;
+    setAdCreditSaving(true);
+    try {
+      const updated = await adminPostUserAdCredit(userId, {
+        amount: adCreditAmount,
+        note: adCreditNote,
+      });
+      setUser(updated);
+      const a = await adminGetUserActivity(userId, 20);
+      setActivity(a.data || []);
+      setAdCreditOpen(false);
+      setAdCreditAmount('');
+      setAdCreditNote('');
+      toast('Manual credit added to wallet', 'success');
+      setErr('');
+    } catch (e2) {
+      toast(e2.message || 'Could not add credit', 'error');
+    } finally {
+      setAdCreditSaving(false);
+    }
+  };
+
+  const walletCurrency = user?.walletCurrency || 'INR';
 
   if (!user && !err) {
     return (
@@ -213,8 +246,8 @@ export default function UserDetailPage() {
             type="button"
             onClick={() => setTab(t)}
             className={`shrink-0 border-b-2 px-4 py-3 text-sm font-semibold capitalize transition-all duration-200 ${tab === t
-                ? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400'
-                : 'border-transparent text-gray-500 dark:text-zinc-400'
+              ? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400'
+              : 'border-transparent text-gray-500 dark:text-zinc-400'
               }`}
           >
             {t}
@@ -294,11 +327,44 @@ export default function UserDetailPage() {
           <DetailSection title="Monetization" description="Creator wallet (if applicable).">
             <Row label="Creator program">{user.creatorProgram ? <Badge tone="purple">Enrolled</Badge> : <Badge tone="default">Not enrolled</Badge>}</Row>
             <Row label="Wallet balance">
-              {user.walletBalance != null && Number(user.walletBalance) > 0
-                ? `${fmtNum(user.walletBalance)} ${user.walletCurrency || 'INR'}`
+              {user.walletBalance != null && user.walletBalance !== ''
+                ? `${fmtNum(user.walletBalance)} ${walletCurrency}`
                 : user.creatorProgram
-                  ? `0 ${user.walletCurrency || 'INR'}`
+                  ? `0 ${walletCurrency}`
                   : '—'}
+            </Row>
+          </DetailSection>
+
+          <DetailSection
+            title="Promoted ads"
+            description={
+              <>
+                Users normally top up from the app (payment requests are user‑initiated). Review the{' '}
+                <Link to="/finance/ad-payments" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+                  ad payment queue
+                </Link>
+                . Use manual credit only for promos, refunds, or support — in their wallet currency.
+              </>
+            }
+          >
+            <Row label="Currency">{walletCurrency}</Row>
+            <Row label="Manual credit">
+              <Button
+                type="button"
+                variant="secondary"
+                className="text-sm"
+                disabled={user.status === 'blocked'}
+                onClick={() => {
+                  setAdCreditOpen(true);
+                  setAdCreditAmount('');
+                  setAdCreditNote('');
+                }}
+              >
+                Add manual credit…
+              </Button>
+              {user.status === 'blocked' ? (
+                <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">Unblock the account before adding credit.</p>
+              ) : null}
             </Row>
           </DetailSection>
 
@@ -357,6 +423,53 @@ export default function UserDetailPage() {
           )}
         </ul>
       )}
+
+      <Modal
+        open={adCreditOpen}
+        onClose={() => !adCreditSaving && setAdCreditOpen(false)}
+        title="Manual ad wallet credit"
+        footer={
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="secondary" type="button" disabled={adCreditSaving} onClick={() => setAdCreditOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit" form="ad-credit-form" disabled={adCreditSaving}>
+              {adCreditSaving ? 'Saving…' : 'Apply credit'}
+            </Button>
+          </div>
+        }
+      >
+        <form id="ad-credit-form" className="space-y-4" onSubmit={submitAdCredit}>
+          <p className="text-sm text-gray-600 dark:text-zinc-400">
+            Regular top‑ups come from the user’s app after they pay. This screen is for an admin‑side adjustment to{' '}
+            <span className="font-medium text-gray-900 dark:text-zinc-100">@{user.username}</span>’s wallet (promo, goodwill,
+            reconciliation). Follow your finance policy for tax and records.
+          </p>
+          <TextField
+            label={`Amount (${walletCurrency})`}
+            name="adCreditAmount"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            required
+            placeholder="e.g. 5000"
+            value={adCreditAmount}
+            onChange={(e) => setAdCreditAmount(e.target.value)}
+          />
+          <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
+            Internal note (optional)
+            <textarea
+              name="adCreditNote"
+              rows={2}
+              value={adCreditNote}
+              onChange={(e) => setAdCreditNote(e.target.value)}
+              placeholder="Campaign / reference for your team"
+              className="mt-1 w-full resize-y rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
+            />
+          </label>
+        </form>
+      </Modal>
     </PageShell>
   );
 }

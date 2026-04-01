@@ -8,6 +8,70 @@ import Badge from '../ui/Badge';
 import MediaThumb from '../ui/MediaThumb';
 import { userAvatarUrl } from '../../lib/placeholders';
 
+function NavGroup({ label, pathPrefix, children, onPick }) {
+  const location = useLocation();
+  const under = location.pathname === pathPrefix || location.pathname.startsWith(`${pathPrefix}/`);
+  const [open, setOpen] = useState(under);
+  const wasUnder = useRef(under);
+
+  useEffect(() => {
+    if (!under) {
+      setOpen(false);
+      wasUnder.current = false;
+      return;
+    }
+    if (under && !wasUnder.current) setOpen(true);
+    wasUnder.current = true;
+  }, [under]);
+
+  return (
+    <div className="rounded-xl">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800/80 ${
+          under
+            ? 'text-gray-900 dark:text-zinc-100'
+            : 'text-gray-600 dark:text-zinc-300'
+        }`}
+      >
+        <span>{label}</span>
+        <svg
+          className={`h-4 w-4 shrink-0 text-gray-400 transition-transform dark:text-zinc-500 ${open ? 'rotate-180' : ''}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          aria-hidden
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open ? (
+        <div className="ml-1 mt-0.5 flex flex-col gap-0.5 border-l border-gray-200 py-0.5 pl-2.5 dark:border-zinc-700">
+          {children.map((child) => (
+            <NavLink
+              key={child.to + child.label}
+              to={child.to}
+              end={child.end}
+              onClick={onPick}
+              className={({ isActive }) =>
+                `rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ease-in-out ${
+                  isActive
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/25'
+                    : 'text-gray-600 hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800/80'
+                }`
+              }
+            >
+              {child.label}
+            </NavLink>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function AdminShell() {
   const { session, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -79,23 +143,33 @@ export default function AdminShell() {
                 {section.title}
               </div>
               <div className="flex flex-col gap-0.5">
-                {section.items.map((item) => (
-                  <NavLink
-                    key={item.to + item.label}
-                    to={item.to}
-                    end={item.end}
-                    onClick={() => setMobileOpen(false)}
-                    className={({ isActive }) =>
-                      `rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ease-in-out ${
-                        isActive
-                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/25'
-                          : 'text-gray-600 hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800/80'
-                      }`
-                    }
-                  >
-                    {item.label}
-                  </NavLink>
-                ))}
+                {section.items.map((item) =>
+                  item.children?.length ? (
+                    <NavGroup
+                      key={item.label}
+                      label={item.label}
+                      pathPrefix={item.pathPrefix}
+                      children={item.children}
+                      onPick={() => setMobileOpen(false)}
+                    />
+                  ) : (
+                    <NavLink
+                      key={item.to + item.label}
+                      to={item.to}
+                      end={item.end}
+                      onClick={() => setMobileOpen(false)}
+                      className={({ isActive }) =>
+                        `rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ease-in-out ${
+                          isActive
+                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/25'
+                            : 'text-gray-600 hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800/80'
+                        }`
+                      }
+                    >
+                      {item.label}
+                    </NavLink>
+                  )
+                )}
               </div>
             </div>
           ))}

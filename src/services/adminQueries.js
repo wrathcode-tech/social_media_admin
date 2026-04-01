@@ -119,6 +119,32 @@ export async function adminGetUserActivity(userId, limit = 20) {
   return getJson(`/admin/users/${userId}/activity?limit=${limit}`);
 }
 
+/** Admin manual wallet credit (promo/support); user-initiated payments stay in the consumer app. Amount in user wallet currency. */
+export async function adminPostUserAdCredit(userId, { amount, note = '' } = {}) {
+  const n = Number(amount);
+  if (!Number.isFinite(n) || n <= 0) throw new Error('Enter a valid amount greater than zero');
+  if (isAdminStaticDataMode()) {
+    const rt = getStaticRuntime();
+    const u = rt.users.find((x) => x._id === userId);
+    if (!u || u.status === 'deleted') throw new Error('Not found');
+    const prev = Number(u.walletBalance) || 0;
+    u.walletBalance = prev + n;
+    if (!u.walletCurrency) u.walletCurrency = 'INR';
+    const list = rt.activityByUser[userId] || [];
+    rt.activityByUser[userId] = [
+      {
+        _id: `adcr-${Date.now()}`,
+        action: 'wallet.ad_credit',
+        createdAt: new Date().toISOString(),
+        meta: { amount: n, currency: u.walletCurrency, note: note.trim() || undefined, previousBalance: prev },
+      },
+      ...list,
+    ];
+    return { ...u };
+  }
+  return postJson(`/admin/users/${userId}/ad-credit`, { amount: n, note: note.trim() || undefined });
+}
+
 function filterContentRows(rows, { userFilter, dateFrom, dateTo }) {
   let list = [...rows];
   if (userFilter) {
@@ -227,10 +253,12 @@ export async function adminPostNotification(body) {
     const row = {
       _id: `b${Date.now().toString(16)}`,
       title: body.title,
-      body: body.body,
+      body: body.body ?? '',
       scope: body.scope || 'global',
       status: body.status || 'draft',
       bannerText: body.bannerText || '',
+      scheduledAt: body.scheduledAt || '',
+      targetUserIds: Array.isArray(body.targetUserIds) ? body.targetUserIds : [],
       createdAt: new Date().toISOString(),
     };
     rt.notifications.unshift(row);
@@ -289,22 +317,18 @@ export async function adminGetAnalyticsBundle() {
     const rt = getStaticRuntime();
     return {
       overview: rt.analyticsOverview,
-      engagementSeries: { data: rt.analyticsEngagementSeries || [] },
-      retentionSeries: { data: rt.analyticsRetentionSeries || [] },
       trendingPosts: { data: rt.trendingPosts },
       trendingReels: { data: rt.trendingReels },
       hashtags: { data: rt.hashtags },
     };
   }
-  const [overview, engagementSeries, retentionSeries, trendingPosts, trendingReels, hashtags] = await Promise.all([
+  const [overview, trendingPosts, trendingReels, hashtags] = await Promise.all([
     getJson('/admin/analytics/overview'),
-    getJson('/admin/analytics/series/engagement'),
-    getJson('/admin/analytics/series/retention'),
     getJson('/admin/analytics/trending/posts'),
     getJson('/admin/analytics/trending/reels'),
     getJson('/admin/analytics/trending/hashtags'),
   ]);
-  return { overview, engagementSeries, retentionSeries, trendingPosts, trendingReels, hashtags };
+  return { overview, trendingPosts, trendingReels, hashtags };
 }
 
 export async function adminGetSettingsApp() {
@@ -334,6 +358,45 @@ export async function adminGetFinancePayouts(limit = 30) {
     return { data: getStaticRuntime().payouts.slice(0, limit) };
   }
   return getJson(`/admin/finance/payouts?limit=${limit}`);
+}
+
+/** User-initiated ad wallet / top-up requests (from the consumer app). */
+export async function adminGetAdPaymentRequests({ status = '', limit = 80 } = {}) {
+  if (isAdminStaticDataMode()) {
+    let list = [...(getStaticRuntime().adPaymentRequests || [])];
+    if (status === 'pending' || status === 'approved' || status === 'rejected') {
+      list = list.filter((r) => r.status === status);
+    }
+    list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return { data: list.slice(0, limit) };
+  }
+  const q = new URLSearchParams({ limit: String(limit) });
+  if (status) q.set('status', status);
+  return getJson(`/admin/finance/ad-payment-requests?${q}`);
+}
+
+export async function adminPatchAdPaymentRequest(id, body) {
+  if (isAdminStaticDataMode()) {
+    const rt = getStaticRuntime();
+    const r = rt.adPaymentRequests.find((x) => x._id === id);
+    if (!r) throw new Error('Not found');
+    if (r.status !== 'pending') throw new Error('This request was already processed');
+    const next = body?.status;
+    if (next !== 'approved' && next !== 'rejected') throw new Error('Invalid status');
+    r.status = next;
+    r.processedAt = new Date().toISOString();
+    if (next === 'rejected' && body.rejectReason) r.rejectReason = String(body.rejectReason);
+    if (next === 'approved') {
+      const uid = typeof r.user === 'object' && r.user?._id ? r.user._id : r.user;
+      const u = rt.users.find((x) => x._id === uid);
+      if (u) {
+        u.walletBalance = (Number(u.walletBalance) || 0) + Number(r.amount);
+        if (!u.walletCurrency) u.walletCurrency = r.currency || 'INR';
+      }
+    }
+    return { ...r };
+  }
+  return patchJson(`/admin/finance/ad-payment-requests/${id}`, body);
 }
 
 export async function adminGetFinanceTransactions(limit = 30) {
