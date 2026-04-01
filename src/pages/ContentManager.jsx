@@ -14,6 +14,12 @@ import PaginationBar from '../components/ui/PaginationBar';
 import MediaThumb from '../components/ui/MediaThumb';
 import { contentThumbUrl } from '../lib/placeholders';
 
+function fmtDateTime(v) {
+  if (v == null || v === '') return '—';
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleString();
+}
+
 /**
  * @param {{ title: string, description?: string, segment: 'posts'|'reels'|'stories'|'comments', showSensitive?: boolean, showHide?: boolean }} props
  */
@@ -135,6 +141,7 @@ export default function ContentManager({ title, description, segment, showSensit
             <tr>
               <Th>Preview</Th>
               <Th>Author</Th>
+              <Th>Posted</Th>
               <Th>Status</Th>
               <Th className="text-right">Actions</Th>
             </tr>
@@ -142,7 +149,7 @@ export default function ContentManager({ title, description, segment, showSensit
           <TBody>
             {loading ? (
               <Tr>
-                <Td colSpan={4} className="py-8 text-center text-gray-500">
+                <Td colSpan={5} className="py-8 text-center text-gray-500">
                   Loading…
                 </Td>
               </Tr>
@@ -161,6 +168,7 @@ export default function ContentManager({ title, description, segment, showSensit
                     </div>
                   </Td>
                   <Td className="font-medium">@{row.author?.username || row.author || '—'}</Td>
+                  <Td className="whitespace-nowrap text-sm text-gray-600 dark:text-zinc-400">{fmtDateTime(row.createdAt)}</Td>
                   <Td>
                     <Badge tone="default" className="capitalize">
                       {row.status}
@@ -224,6 +232,7 @@ export default function ContentManager({ title, description, segment, showSensit
                   <p className="mt-2 text-sm font-medium text-gray-900 dark:text-zinc-100">
                     @{row.author?.username || row.author || '—'}
                   </p>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-zinc-500">{fmtDateTime(row.createdAt)}</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <Badge tone="default" className="capitalize">
                       {row.status}
