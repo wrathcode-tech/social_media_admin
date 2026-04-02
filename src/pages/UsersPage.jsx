@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { adminGetUsers } from '../services/adminQueries';
+import ReactPaginate from 'react-paginate';
 import PageShell from '../components/ui/PageShell';
 import PageHeader from '../components/ui/PageHeader';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
-import DataTable, { TBody, Td, Th, THead, Tr } from '../components/ui/DataTable';
 import Badge from '../components/ui/Badge';
-import PaginationBar from '../components/ui/PaginationBar';
-import { TableRowSkeleton } from '../components/ui/Skeleton';
 import MediaThumb from '../components/ui/MediaThumb';
 import { userAvatarUrl } from '../lib/placeholders';
+import AuthService from '../api/services/AuthService';
+import CustomDataTable from '../utils/DataTable';
+import { useToast } from '../context/ToastContext';
 
 function IconEye({ className = 'h-5 w-5' }) {
   return (
@@ -45,8 +45,22 @@ function IconUserProfile({ className = 'h-5 w-5' }) {
   );
 }
 
+function IconCopy({ className = 'h-5 w-5' }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+      />
+    </svg>
+  );
+}
+
 function UserListRowActions({ user, onQuickView, align = 'end' }) {
   const labelBase = user?.username ? `@${user.username}` : 'user';
+  const uid = userRowId(user);
   return (
     <div className={`flex items-center gap-1 ${align === 'end' ? 'justify-end' : 'justify-start'}`}>
       <button
@@ -58,7 +72,7 @@ function UserListRowActions({ user, onQuickView, align = 'end' }) {
         <IconEye />
       </button>
       <Link
-        to={`/users/${user._id}`}
+        to={`/users/${uid}`}
         aria-label={`Open profile ${labelBase}`}
         className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-950/40 dark:hover:text-blue-300"
       >
@@ -68,13 +82,31 @@ function UserListRowActions({ user, onQuickView, align = 'end' }) {
   );
 }
 
+function userRowId(u) {
+  if (!u) return '';
+  return String(u._id ?? u.id ?? '');
+}
+
+function deriveUserStatus(u) {
+  if (u?.status) return u.status;
+  if (u?.isBanned) return 'blocked';
+  if (u?.isActive === false) return 'inactive';
+  return 'active';
+}
+
+function normalizeAdminUserRow(u) {
+  if (!u || typeof u !== 'object') return u;
+  const id = u._id ?? u.id;
+  return { ...u, _id: id, id, status: deriveUserStatus(u) };
+}
+
 function downloadUserCsv(rows) {
-  const headers = ['username', 'email', 'followers', 'status'];
+  const headers = ['username', 'email', 'fullName', 'followers', 'status'];
   const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const lines = [
     headers.join(','),
     ...rows.map((u) =>
-      [u.username, u.email, u.followersCount ?? '', u.status].map(esc).join(',')
+      [u.username, u.email, u.fullName ?? '', u.followersCount ?? '', u.status].map(esc).join(',')
     ),
   ];
   const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
@@ -85,81 +117,277 @@ function downloadUserCsv(rows) {
   URL.revokeObjectURL(a.href);
 }
 
-function SortButton({ label, active, dir, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex items-center gap-1 font-semibold text-gray-500 transition-colors hover:text-gray-800 dark:text-zinc-400 dark:hover:text-zinc-100"
-    >
-      {label}
-      <span className="text-[10px] tabular-nums text-gray-400 dark:text-zinc-500">
-        {active ? (dir === 'asc' ? '▲' : '▼') : '◇'}
-      </span>
-    </button>
-  );
+function extractUsersArrayFromResponse(res) {
+  if (!res || typeof res !== 'object') return [];
+  const raw = res.data;
+  const candidates = [
+    raw?.users,
+    Array.isArray(raw?.data) ? raw.data : raw?.data?.users,
+    raw?.data?.users,
+    raw?.data?.data?.users,
+    Array.isArray(raw) ? raw : null,
+    res.result?.users,
+    res.payload?.users,
+    res.users,
+  ];
+  let emptyFallback = null;
+  for (const c of candidates) {
+    if (!Array.isArray(c)) continue;
+    if (c.length > 0) return c;
+    if (emptyFallback === null) emptyFallback = c;
+  }
+  return emptyFallback || [];
+}
+
+function normalizeUserListResponse(res, { requestedPage = 1, requestedLimit = 10 } = {}) {
+  const raw = res?.data;
+  const inner =
+    raw && typeof raw === 'object' && !Array.isArray(raw) && raw.data != null && typeof raw.data === 'object' && !Array.isArray(raw.data)
+      ? raw.data
+      : null;
+
+  let list = extractUsersArrayFromResponse(res);
+
+  if (list.length === 0) {
+    if (Array.isArray(raw)) list = raw;
+    else if (Array.isArray(raw?.users)) list = raw.users;
+    else if (Array.isArray(inner?.users)) list = inner.users;
+    else if (Array.isArray(raw?.data)) list = raw.data;
+    else if (Array.isArray(inner?.data)) list = inner.data;
+  }
+
+  list = list.map((u) => normalizeAdminUserRow(u)).filter((u) => u && typeof u === 'object');
+
+  const pag = res?.pagination ?? raw?.pagination ?? inner?.pagination ?? {};
+  const metaSrc = {
+    ...(typeof pag === 'object' ? pag : {}),
+    ...(res?.meta && typeof res.meta === 'object' ? res.meta : {}),
+    ...(raw?.meta && typeof raw.meta === 'object' ? raw.meta : {}),
+  };
+
+  const limit = Number(metaSrc.limit ?? res?.limit ?? requestedLimit) || requestedLimit;
+  const page = Number(metaSrc.page ?? res?.page ?? raw?.page ?? requestedPage) || requestedPage;
+  const total =
+    metaSrc.total ??
+    metaSrc.totalCount ??
+    res?.total ??
+    res?.totalCount ??
+    raw?.total ??
+    raw?.totalCount ??
+    inner?.total ??
+    inner?.totalCount;
+
+  let pages = metaSrc.pages ?? metaSrc.totalPages;
+  if (pages == null && total != null && Number.isFinite(Number(total))) {
+    pages = Math.max(1, Math.ceil(Number(total) / limit));
+  }
+  if (pages == null) {
+    if (list.length >= limit) pages = page + 1;
+    else pages = Math.max(1, page);
+  }
+
+  const meta = {
+    page,
+    pages: Math.max(1, Number(pages) || 1),
+    limit,
+    ...(total != null ? { total: Number(total) } : {}),
+    ...(res?.count != null ? { count: res.count } : {}),
+  };
+
+  return { list, meta };
+}
+
+function fmtDateTime(iso) {
+  if (iso == null || iso === '') return '—';
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString();
 }
 
 export default function UsersPage() {
-  const [data, setData] = useState([]);
-  const [meta, setMeta] = useState({ page: 1, pages: 1 });
+  const { toast } = useToast();
+  const [userListData, setUserListData] = useState([]);
+  const [userListMeta, setUserListMeta] = useState({ page: 1, pages: 1 });
+  const [totalUsers, setTotalUsers] = useState(0);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
   const [preview, setPreview] = useState(null);
-  const [sortKey, setSortKey] = useState('username');
-  const [sortDir, setSortDir] = useState('asc');
-
-  const load = async (page = 1) => {
-    setLoading(true);
-    try {
-      const res = await adminGetUsers({
-        page,
-        limit: 10,
-        search,
-        status: statusFilter,
-      });
-      setData(res.data || []);
-      setMeta(res.meta || meta);
-      setErr('');
-    } catch (e) {
-      setErr(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    load(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter]);
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 500);
+    return () => clearTimeout(t);
+  }, [search]);
 
-  const toggleSort = (key) => {
-    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    else {
-      setSortKey(key);
-      setSortDir(key === 'followers' ? 'desc' : 'asc');
-    }
-  };
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, statusFilter, itemsPerPage]);
 
-  const sorted = useMemo(() => {
-    const copy = [...data];
-    const dir = sortDir === 'asc' ? 1 : -1;
-    copy.sort((a, b) => {
-      if (sortKey === 'followers') {
-        return dir * ((a.followersCount || 0) - (b.followersCount || 0));
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        setLoading(true);
+        setErr('');
+        const res = await AuthService.userList({
+          page: currentPage,
+          limit: itemsPerPage,
+          search: debouncedSearch,
+          status: statusFilter,
+        });
+        if (!alive) return;
+        const { list, meta } = normalizeUserListResponse(res, {
+          requestedPage: currentPage,
+          requestedLimit: itemsPerPage,
+        });
+        if (res && typeof res === 'object' && res.success === false) {
+          setUserListData([]);
+          setErr(res?.message || 'Something went wrong');
+          return;
+        }
+        setUserListData(list);
+        setUserListMeta(meta);
+        if (meta.total != null && Number.isFinite(Number(meta.total))) {
+          setTotalUsers(Number(meta.total));
+        } else {
+          setTotalUsers(0);
+        }
+      } catch (e) {
+        if (!alive) return;
+        setErr(e?.message || 'Failed to fetch users');
+      } finally {
+        if (alive) setLoading(false);
       }
-      const va = String(a[sortKey] || '').toLowerCase();
-      const vb = String(b[sortKey] || '').toLowerCase();
-      if (va < vb) return -1 * dir;
-      if (va > vb) return 1 * dir;
-      return 0;
-    });
-    return copy;
-  }, [data, sortKey, sortDir]);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [currentPage, itemsPerPage, debouncedSearch, statusFilter]);
 
-  const tone = (s) => (s === 'active' ? 'success' : s === 'blocked' ? 'warning' : 'default');
+  const pageCount = useMemo(() => {
+    if (totalUsers > 0 && itemsPerPage > 0) {
+      return Math.max(1, Math.ceil(totalUsers / itemsPerPage));
+    }
+    return Math.max(1, userListMeta.pages ?? 1);
+  }, [totalUsers, itemsPerPage, userListMeta.pages]);
+
+  const columns = useMemo(() => {
+    const skip = (currentPage - 1) * itemsPerPage;
+    const copyId = async (row) => {
+      const id = userRowId(row);
+      if (!id) return;
+      try {
+        await navigator.clipboard.writeText(id);
+        toast('User ID copied', 'success');
+      } catch {
+        toast('Could not copy', 'error');
+      }
+    };
+    return [
+      {
+        name: 'Sr.',
+        width: '56px',
+        center: true,
+        sortable: false,
+        selector: (_row, i) => skip + i + 1,
+      },
+      {
+        name: 'User ID',
+        width: '200px',
+        wrap: true,
+        sortable: false,
+        cell: (row) => (
+          <div className="flex items-center gap-2">
+            <Link
+              to={`/users/${userRowId(row)}`}
+              className="font-mono text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
+            >
+              {(userRowId(row) || '—').slice(0, 8).toUpperCase()}…
+            </Link>
+            <button
+              type="button"
+              aria-label="Copy user id"
+              className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+              onClick={() => copyId(row)}
+            >
+              <IconCopy className="h-4 w-4" />
+            </button>
+          </div>
+        ),
+      },
+      {
+        name: 'User',
+        minWidth: '220px',
+        sortable: false,
+        cell: (row) => (
+          <div className="flex items-center gap-2 py-0.5">
+            <MediaThumb
+              src={userAvatarUrl(row)}
+              className="h-9 w-9 shrink-0 rounded-lg border border-gray-200 dark:border-zinc-600"
+            />
+            <span className="font-medium text-gray-900 dark:text-zinc-100">@{row.username || '—'}</span>
+          </div>
+        ),
+      },
+      {
+        name: 'Full name',
+        minWidth: '140px',
+        sortable: false,
+        selector: (row) => row.fullName || '—',
+      },
+      {
+        name: 'Email',
+        minWidth: '200px',
+        wrap: true,
+        sortable: false,
+        selector: (row) => row.email || '—',
+      },
+      {
+        name: 'Followers',
+        right: true,
+        width: '100px',
+        sortable: false,
+        selector: (row) =>
+          row.followersCount != null ? Number(row.followersCount).toLocaleString() : '—',
+      },
+      {
+        name: 'Following',
+        right: true,
+        width: '100px',
+        sortable: false,
+        selector: (row) =>
+          row.followingCount != null ? Number(row.followingCount).toLocaleString() : '—',
+      },
+      {
+        name: 'Status',
+        width: '120px',
+        sortable: false,
+        cell: (row) => <Badge>{row.status}</Badge>,
+      },
+      {
+        name: 'Joined',
+        width: '160px',
+        sortable: false,
+        selector: (row) => fmtDateTime(row.createdAt),
+      },
+      {
+        name: 'Last login',
+        width: '160px',
+        sortable: false,
+        selector: (row) => fmtDateTime(row.lastLogin ?? row.lastLoginTime),
+      },
+      {
+        name: 'Actions',
+        width: '120px',
+        right: true,
+        sortable: false,
+        cell: (row) => <UserListRowActions user={row} onQuickView={setPreview} />,
+      },
+    ];
+  }, [currentPage, itemsPerPage, toast]);
 
   return (
     <PageShell>
@@ -170,21 +398,15 @@ export default function UsersPage() {
           <Button
             type="button"
             variant="secondary"
-            disabled={loading || data.length === 0}
-            onClick={() => downloadUserCsv(sorted)}
+            disabled={loading || userListData.length === 0}
+            onClick={() => downloadUserCsv(userListData)}
           >
             Export CSV
           </Button>
         }
       />
       <Card className="shadow-lg" padding="p-4 md:p-5">
-        <form
-          className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end"
-          onSubmit={(e) => {
-            e.preventDefault();
-            load(1);
-          }}
-        >
+        <div className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end">
           <label className="min-w-[200px] flex-1 text-sm font-medium text-gray-700 dark:text-zinc-300">
             Search
             <input
@@ -199,124 +421,91 @@ export default function UsersPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="mt-1 block w-full min-w-[140px] rounded-xl border border-gray-300 px-3 py-2.5 text-sm dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
+              className="mt-1 block w-full min-w-[160px] rounded-xl border border-gray-300 px-3 py-2.5 text-sm dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
             >
               <option value="">All status</option>
               <option value="active">Active</option>
               <option value="blocked">Blocked</option>
             </select>
           </label>
-          <Button type="submit" variant="primary">
-            Apply
-          </Button>
-        </form>
-        {!loading ? (
-          <p className="mt-3 text-xs text-gray-500 dark:text-zinc-500">
-            Showing {data.length} on this page · Page {meta.page} of {meta.pages}
-          </p>
-        ) : null}
+        </div>
+        <p className="mt-3 text-xs text-gray-500 dark:text-zinc-500">
+          <span className="font-medium text-gray-700 dark:text-zinc-300">Total users</span>
+          {totalUsers > 0 ? (
+            <span className="ms-1 text-emerald-600 dark:text-emerald-400">({totalUsers.toLocaleString()})</span>
+          ) : null}
+          {!loading ? (
+            <>
+              {' '}
+              · Showing {userListData.length} on this page · Page {currentPage} / {pageCount}
+            </>
+          ) : null}
+        </p>
       </Card>
       {err ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{err}</div> : null}
-      <div className="hidden md:block">
-        <DataTable>
-          <THead>
-            <tr>
-              <Th>
-                <SortButton label="User" active={sortKey === 'username'} dir={sortDir} onClick={() => toggleSort('username')} />
-              </Th>
-              <Th>
-                <SortButton label="Email" active={sortKey === 'email'} dir={sortDir} onClick={() => toggleSort('email')} />
-              </Th>
-              <Th>
-                <SortButton
-                  label="Followers"
-                  active={sortKey === 'followers'}
-                  dir={sortDir}
-                  onClick={() => toggleSort('followers')}
-                />
-              </Th>
-              <Th>Status</Th>
-              <Th className="text-right">Actions</Th>
-            </tr>
-          </THead>
-          <TBody>
-            {loading ? (
-              Array.from({ length: 6 }).map((_, i) => <TableRowSkeleton key={i} cols={5} />)
-            ) : sorted.length === 0 ? (
-              <Tr>
-                <Td colSpan={5} className="py-12 text-center text-gray-500 dark:text-zinc-400">
-                  No users match your filters.
-                </Td>
-              </Tr>
-            ) : (
-              sorted.map((u) => (
-                <Tr key={u._id} className="group">
-                  <Td>
-                    <div className="flex items-center gap-3">
-                      <MediaThumb
-                        src={userAvatarUrl(u)}
-                        className="h-10 w-10 shrink-0 rounded-xl border border-gray-200 shadow-inner dark:border-zinc-600"
-                      />
-                      <div>
-                        <div className="font-semibold text-gray-900 dark:text-zinc-50">@{u.username}</div>
-                        <div className="text-xs text-gray-400 dark:text-zinc-500">ID …{String(u._id).slice(-6)}</div>
-                      </div>
-                    </div>
-                  </Td>
-                  <Td className="text-gray-600 dark:text-zinc-400">{u.email}</Td>
-                  <Td className="tabular-nums font-medium">{u.followersCount?.toLocaleString?.() ?? u.followersCount}</Td>
-                  <Td>
-                    <Badge tone={tone(u.status)}>{u.status}</Badge>
-                  </Td>
-                  <Td className="text-right">
-                    <UserListRowActions user={u} onQuickView={setPreview} />
-                  </Td>
-                </Tr>
-              ))
-            )}
-          </TBody>
-        </DataTable>
+
+      <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-md dark:border-zinc-800 dark:bg-zinc-900">
+        <CustomDataTable
+          columns={columns}
+          data={userListData}
+          pagination={false}
+          persistTableHead
+          progressPending={loading}
+          customStyles={{
+            headRow: {
+              style: {
+                backgroundColor: 'rgba(0,0,0,0.03)',
+                borderBottom: '1px solid rgb(229 231 235)',
+                color: 'inherit',
+              },
+            },
+            rows: {
+              style: {
+                backgroundColor: 'transparent',
+                borderBottom: '1px solid rgb(243 244 246 / 0.85)',
+                color: 'inherit',
+              },
+            },
+          }}
+        />
       </div>
-      <div className="space-y-3 md:hidden">
-        {loading ? (
-          Array.from({ length: 5 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-28 animate-pulse rounded-2xl border border-gray-200 bg-gray-100 dark:border-zinc-700 dark:bg-zinc-800"
-            />
-          ))
-        ) : sorted.length === 0 ? (
-          <Card className="shadow-md" padding="p-6">
-            <p className="text-center text-sm text-gray-500 dark:text-zinc-400">No users match your filters.</p>
-          </Card>
-        ) : (
-          sorted.map((u) => (
-            <Card key={u._id} className="shadow-md" padding="p-4">
-              <div className="flex gap-3">
-                <MediaThumb
-                  src={userAvatarUrl(u)}
-                  className="h-12 w-12 shrink-0 rounded-xl border border-gray-200 dark:border-zinc-600"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-gray-900 dark:text-zinc-50">@{u.username}</p>
-                  <p className="truncate text-sm text-gray-600 dark:text-zinc-400">{u.email}</p>
-                  <p className="mt-1 text-xs text-gray-400 dark:text-zinc-500">ID …{String(u._id).slice(-6)}</p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="text-sm tabular-nums text-gray-700 dark:text-zinc-300">
-                      {u.followersCount?.toLocaleString?.() ?? u.followersCount} followers
-                    </span>
-                    <Badge tone={tone(u.status)}>{u.status}</Badge>
-                  </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3 dark:border-zinc-800">
-                    <UserListRowActions user={u} onQuickView={setPreview} align="start" />
-                  </div>
-                </div>
-              </div>
-            </Card>
-          ))
-        )}
+
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-zinc-400">
+          Rows per page
+          <select
+            value={itemsPerPage}
+            onChange={(e) => setItemsPerPage(Number(e.target.value))}
+            className="rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
+          >
+            {[10, 25, 50, 100].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </label>
+        <ReactPaginate
+          breakLabel="…"
+          nextLabel="Next ›"
+          previousLabel="‹ Prev"
+          onPageChange={({ selected }) => setCurrentPage(selected + 1)}
+          pageRangeDisplayed={3}
+          marginPagesDisplayed={1}
+          pageCount={pageCount}
+          forcePage={currentPage - 1}
+          renderOnZeroPageCount={null}
+          containerClassName="flex flex-wrap items-center gap-1 list-none p-0"
+          pageClassName="inline-block"
+          pageLinkClassName="inline-flex min-w-[2.25rem] justify-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          activeClassName="!border-blue-500 !bg-blue-50 dark:!border-blue-600 dark:!bg-blue-950/50"
+          previousClassName="inline-block"
+          nextClassName="inline-block"
+          previousLinkClassName="inline-flex rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+          nextLinkClassName="inline-flex rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+          disabledClassName="pointer-events-none opacity-40"
+        />
       </div>
-      <PaginationBar page={meta.page} pages={meta.pages} onPageChange={load} disabled={loading} />
 
       <Modal
         open={!!preview}
@@ -328,7 +517,7 @@ export default function UsersPage() {
               <Button variant="secondary" type="button" onClick={() => setPreview(null)}>
                 Close
               </Button>
-              <Button variant="primary" as={Link} to={`/users/${preview._id}`} onClick={() => setPreview(null)}>
+              <Button variant="primary" as={Link} to={`/users/${userRowId(preview)}`} onClick={() => setPreview(null)}>
                 Full profile
               </Button>
             </div>
@@ -348,7 +537,7 @@ export default function UsersPage() {
               <dd className="tabular-nums font-semibold">{preview.followersCount?.toLocaleString?.()}</dd>
               <dt className="text-gray-500 dark:text-zinc-400">Status</dt>
               <dd>
-                <Badge tone={tone(preview.status)}>{preview.status}</Badge>
+                <Badge>{preview.status}</Badge>
               </dd>
             </dl>
           </div>

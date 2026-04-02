@@ -1,30 +1,6 @@
 import { ApiConfig } from "../apiConfig/apiConfig";
 import { ApiCallGet, ApiCallPost, ApiCallPostFormData, ApiCallPut, ApiCallPutFormData, ApiCallPatch, ApiCallDelete } from "../apiConfig/apiCall";
 
-// Read token from sessionStorage OR localStorage (for backward compatibility)
-const getStoredToken = () => {
-  try {
-    return sessionStorage.getItem("token") || localStorage.getItem("token");
-  } catch {
-    try {
-      return sessionStorage.getItem("token");
-    } catch {
-      return null;
-    }
-  }
-};
-
-const isDemoSession = () => {
-  try {
-    const raw = sessionStorage.getItem("user");
-    if (!raw) return false;
-    const user = JSON.parse(raw);
-    return user?.isDemo === true;
-  } catch {
-    return false;
-  }
-};
-
 const AuthService = {
 
 
@@ -32,84 +8,255 @@ const AuthService = {
   // BETTING AUTH METHODS
   // ============================================================================
 
-  bettingSendOtp: async (mobile) => {
-    const { baseBettingAuth, bettingSendOtp } = ApiConfig;
-    const url = baseBettingAuth + bettingSendOtp;
-    const params = { mobile };
-    const headers = { "Content-Type": "application/json" };
-    return ApiCallPost(url, params, headers);
-  },
-
-  bettingRegister: async (mobile, otp, password, confirmPassword, referralCode = "") => {
-    const { baseBettingAuth, bettingRegister } = ApiConfig;
-    const url = baseBettingAuth + bettingRegister;
-    const params = { mobile, otp, password, confirmPassword, referralCode };
-    const headers = { "Content-Type": "application/json" };
-    return ApiCallPost(url, params, headers);
-  },
-
-  bettingLogin: async (mobile, password) => {
-    const { baseBettingAuth, bettingLogin } = ApiConfig;
-    const url = baseBettingAuth + bettingLogin;
-    const params = { mobile, password };
-    const headers = { "Content-Type": "application/json" };
-    return ApiCallPost(url, params, headers);
-  },
-
-  /** POST /api/v1/auth/demo-login – view-only guest. Returns { token, user: { id, username, balance: 0, currency, isDemo: true, expiresAt } }. */
-  bettingDemoLogin: async () => {
-    const { baseBettingAuth, bettingDemoLogin } = ApiConfig;
-    const url = baseBettingAuth + bettingDemoLogin;
-    const headers = { "Content-Type": "application/json" };
-    return ApiCallPost(url, {}, headers);
-  },
-
-  bettingRefreshToken: async (refreshToken) => {
-    const { baseBettingAuth, bettingRefreshToken } = ApiConfig;
-    const url = baseBettingAuth + bettingRefreshToken;
-    const params = { refreshToken };
-    const headers = { "Content-Type": "application/json" };
-    return ApiCallPost(url, params, headers);
-  },
-
-  bettingForgotPasswordSendOtp: async (mobile) => {
-    const { baseBettingAuth, bettingForgotPasswordSendOtp } = ApiConfig;
-    const url = baseBettingAuth + bettingForgotPasswordSendOtp;
-    const params = { mobile };
-    const headers = { "Content-Type": "application/json" };
-    return ApiCallPost(url, params, headers);
-  },
-
-  bettingForgotPasswordReset: async (mobile, otp, newPassword, confirmNewPassword) => {
-    const { baseBettingAuth, bettingForgotPasswordReset } = ApiConfig;
-    const url = baseBettingAuth + bettingForgotPasswordReset;
-    const params = { mobile, otp, newPassword, confirmNewPassword };
-    const headers = { "Content-Type": "application/json" };
-    return ApiCallPost(url, params, headers);
-  },
-
-  /** POST /auth/logout – body: { refreshToken } (per API doc). */
-  bettingLogout: async () => {
-    const token = sessionStorage.getItem("token");
-    const refreshToken = sessionStorage.getItem("refreshToken");
-    const { baseBettingAuth, bettingLogout } = ApiConfig;
-    const url = baseBettingAuth + bettingLogout;
+  adminLogin: async (email, password = "") => {
+    const { baseAdminAuth, adminLogin } = ApiConfig;
+    const url = baseAdminAuth + adminLogin;
+    const params = { email, password };
     const headers = {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
     };
-    return ApiCallPost(url, { refreshToken: refreshToken || "" }, headers);
+    return ApiCallPost(url, params, headers);
   },
 
-  bettingGetMe: async () => {
+  dashboard: async () => {
     const token = sessionStorage.getItem("token");
-    const { baseBettingAuth, bettingGetMe } = ApiConfig;
-    const url = baseBettingAuth + bettingGetMe;
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    };
+    const { baseAdminDashboard, dashboard } = ApiConfig;
+    const url = `${baseAdminDashboard}${dashboard}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
     return ApiCallGet(url, headers);
+  },
+  userList: async ({ page = 1, limit = 10, search = '', status = '' } = {}) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminDashboard, userList } = ApiConfig;
+    const q = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (String(search).trim()) q.set('search', String(search).trim());
+    if (status) q.set('status', status);
+    const url = `${baseAdminDashboard}${userList}?${q}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallGet(url, headers);
+  },
+
+  /** GET /api/v1/admin/users/:id */
+  adminGetUser: async (userId) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminDashboard, userList } = ApiConfig;
+    const id = encodeURIComponent(String(userId ?? "").trim());
+    if (!id) return { success: false, message: "Invalid user id" };
+    const url = `${baseAdminDashboard}${userList}/${id}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallGet(url, headers);
+  },
+
+  /** PUT /api/v1/admin/users/:id/ban — body: { banned, reason? } */
+  adminPutUserBan: async (userId, { banned, reason } = {}) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminDashboard, userList } = ApiConfig;
+    const id = encodeURIComponent(String(userId ?? "").trim());
+    if (!id) return { success: false, message: "Invalid user id" };
+    const url = `${baseAdminDashboard}${userList}/${id}/ban`;
+    const headers = {
+      "Content-Type": "application/json",
+    };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const params = { banned: Boolean(banned) };
+    if (reason != null && String(reason).trim() !== "") {
+      params.reason = String(reason).trim();
+    }
+    return ApiCallPut(url, params, headers);
+  },
+
+  /** PUT /api/v1/admin/users/:id/restrict — body: { canPost, canMessage, canReel, canStory } */
+  adminPutUserRestrict: async (userId, { canPost, canMessage, canReel, canStory } = {}) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminDashboard, userList } = ApiConfig;
+    const id = encodeURIComponent(String(userId ?? "").trim());
+    if (!id) return { success: false, message: "Invalid user id" };
+    const url = `${baseAdminDashboard}${userList}/${id}/restrict`;
+    const headers = {
+      "Content-Type": "application/json",
+    };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const params = {
+      canPost: Boolean(canPost),
+      canMessage: Boolean(canMessage),
+      canReel: Boolean(canReel),
+      canStory: Boolean(canStory),
+    };
+    return ApiCallPut(url, params, headers);
+  },
+
+  /** DELETE /api/v1/admin/users/:id */
+  adminDeleteUser: async (userId) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminDashboard, userList } = ApiConfig;
+    const id = encodeURIComponent(String(userId ?? "").trim());
+    if (!id) return { success: false, message: "Invalid user id" };
+    const url = `${baseAdminDashboard}${userList}/${id}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallDelete(url, headers);
+  },
+
+  /** GET /api/v1/admin/posts — query: page, limit, userId, from, to, status */
+  adminListPosts: async ({
+    page = 1,
+    limit = 15,
+    userId = '',
+    authorId = '',
+    from = '',
+    to = '',
+    status = '',
+  } = {}) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminPosts, postsList } = ApiConfig;
+    const q = new URLSearchParams({ page: String(page), limit: String(limit) });
+    const uid = String(userId || authorId || "").trim();
+    if (uid) q.set("userId", uid);
+    if (String(from).trim()) q.set("from", String(from).trim());
+    if (String(to).trim()) q.set("to", String(to).trim());
+    if (String(status).trim()) q.set("status", String(status).trim());
+    const url = `${baseAdminPosts}${postsList}?${q}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallGet(url, headers);
+  },
+
+  /** GET /api/v1/admin/posts/:id */
+  adminGetPost: async (postId) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminPosts, postsList } = ApiConfig;
+    const id = encodeURIComponent(String(postId ?? "").trim());
+    if (!id) return { success: false, message: "Invalid post id" };
+    const url = `${baseAdminPosts}${postsList}/${id}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallGet(url, headers);
+  },
+
+  /** DELETE /api/v1/admin/posts/:id */
+  adminDeletePost: async (postId) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminPosts, postsList } = ApiConfig;
+    const id = encodeURIComponent(String(postId ?? "").trim());
+    if (!id) return { success: false, message: "Invalid post id" };
+    const url = `${baseAdminPosts}${postsList}/${id}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallDelete(url, headers);
+  },
+
+  /** PUT /api/v1/admin/posts/:id/restore */
+  adminRestorePost: async (postId) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminPosts, postsList } = ApiConfig;
+    const id = encodeURIComponent(String(postId ?? "").trim());
+    if (!id) return { success: false, message: "Invalid post id" };
+    const url = `${baseAdminPosts}${postsList}/${id}/restore`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallPut(url, {}, headers);
+  },
+
+  /**
+   * PUT /api/v1/admin/posts/:id/moderate
+   * Accepts UI flags { hidden, sensitive, restricted } or API flags { isHidden, isSensitive, isRestricted }.
+   */
+  adminModeratePost: async (postId, body = {}) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminPosts, postsList } = ApiConfig;
+    const id = encodeURIComponent(String(postId ?? "").trim());
+    if (!id) return { success: false, message: "Invalid post id" };
+    const url = `${baseAdminPosts}${postsList}/${id}/moderate`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const b = body && typeof body === "object" ? body : {};
+    const payload = {
+      isHidden: Boolean(b.isHidden ?? b.hidden),
+      isSensitive: Boolean(b.isSensitive ?? b.sensitive),
+      isRestricted: Boolean(b.isRestricted ?? b.restricted),
+    };
+    return ApiCallPut(url, payload, headers);
+  },
+
+  /** GET /api/v1/admin/reels — query: page, limit, userId, from, to, status */
+  adminListReels: async ({
+    page = 1,
+    limit = 15,
+    userId = '',
+    authorId = '',
+    from = '',
+    to = '',
+    status = '',
+  } = {}) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminPosts, reelsList } = ApiConfig;
+    const q = new URLSearchParams({ page: String(page), limit: String(limit) });
+    const uid = String(userId || authorId || "").trim();
+    if (uid) q.set("userId", uid);
+    if (String(from).trim()) q.set("from", String(from).trim());
+    if (String(to).trim()) q.set("to", String(to).trim());
+    if (String(status).trim()) q.set("status", String(status).trim());
+    const url = `${baseAdminPosts}${reelsList}?${q}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallGet(url, headers);
+  },
+
+  /** GET /api/v1/admin/reels/:id */
+  adminGetReel: async (reelId) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminPosts, reelsList } = ApiConfig;
+    const id = encodeURIComponent(String(reelId ?? "").trim());
+    if (!id) return { success: false, message: "Invalid reel id" };
+    const url = `${baseAdminPosts}${reelsList}/${id}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallGet(url, headers);
+  },
+
+  /** DELETE /api/v1/admin/reels/:id */
+  adminDeleteReel: async (reelId) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminPosts, reelsList } = ApiConfig;
+    const id = encodeURIComponent(String(reelId ?? "").trim());
+    if (!id) return { success: false, message: "Invalid reel id" };
+    const url = `${baseAdminPosts}${reelsList}/${id}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallDelete(url, headers);
+  },
+
+  /** PUT /api/v1/admin/reels/:id/restore */
+  adminRestoreReel: async (reelId) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminPosts, reelsList } = ApiConfig;
+    const id = encodeURIComponent(String(reelId ?? "").trim());
+    if (!id) return { success: false, message: "Invalid reel id" };
+    const url = `${baseAdminPosts}${reelsList}/${id}/restore`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallPut(url, {}, headers);
+  },
+
+  /** PUT /api/v1/admin/reels/:id/moderate */
+  adminModerateReel: async (reelId, body = {}) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminPosts, reelsList } = ApiConfig;
+    const id = encodeURIComponent(String(reelId ?? "").trim());
+    if (!id) return { success: false, message: "Invalid reel id" };
+    const url = `${baseAdminPosts}${reelsList}/${id}/moderate`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const b = body && typeof body === "object" ? body : {};
+    const payload = {
+      isHidden: Boolean(b.isHidden ?? b.hidden),
+      isSensitive: Boolean(b.isSensitive ?? b.sensitive),
+      isRestricted: Boolean(b.isRestricted ?? b.restricted),
+    };
+    return ApiCallPut(url, payload, headers);
   },
 
   bettingUpdateProfile: async (payload, profileImageFile = null) => {
@@ -150,31 +297,6 @@ const AuthService = {
     return ApiCallGet(url, headers);
   },
 
-  /** GET /api/v1/wallet/generate-address – auth required. No request body. */
-  walletGenerateAddress: async () => {
-    const token = getStoredToken();
-    if (!token) return { success: false, message: "Login required" };
-    const { baseBettingWallet, bettingGenerateAddress } = ApiConfig;
-    const url = baseBettingWallet + bettingGenerateAddress;
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    };
-    return ApiCallGet(url, headers);
-  },
-
-  /** GET /api/v1/wallet/verify-usdt-deposit – checks newly arrived USDT deposits for generated BEP20 address. */
-  walletVerifyUsdtDeposit: async () => {
-    const token = getStoredToken();
-    if (!token) return { success: false, message: "Login required" };
-    const { baseBettingWallet, bettingVerifyUsdtDeposit } = ApiConfig;
-    const url = baseBettingWallet + bettingVerifyUsdtDeposit;
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    };
-    return ApiCallGet(url, headers);
-  },
 
   /** GET /api/v1/user/platform-configuration – returns { success, data: { depositServiceStatus, withdrawalServiceStatus, referralServiceStatus, ... } }. */
   getPlatformConfiguration: async () => {
@@ -260,29 +382,6 @@ const AuthService = {
     const { baseBettingWallet, bettingDepositTransactions } = ApiConfig;
     const params = new URLSearchParams({ page: String(page), limit: String(limit) });
     const url = `${baseBettingWallet}${bettingDepositTransactions}?${params.toString()}`;
-    const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
-    return ApiCallGet(url, headers);
-  },
-
-  /** GET /api/v1/wallet/transactions – list with pagination (page, limit, type). Returns { data: { transactions, pagination } }. */
-  walletTransactions: async (page = 1, limit = 10, type = "all") => {
-    if (isDemoSession()) {
-      return {
-        success: true,
-        data: {
-          transactions: [],
-          pagination: { page: Number(page) || 1, limit: Number(limit) || 10, total: 0, totalPages: 1 },
-        },
-      };
-    }
-    const token = sessionStorage.getItem("token");
-    if (!token) return { success: false, message: "Login required" };
-    const { baseBettingWallet, bettingWalletTransactions } = ApiConfig;
-    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-    if (type && type !== "all") params.set("type", type);
-    const base = baseBettingWallet.replace(/\/$/, "");
-    const path = bettingWalletTransactions.replace(/^\//, "");
-    const url = `${base}/${path}?${params.toString()}`;
     const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
     return ApiCallGet(url, headers);
   },
@@ -603,82 +702,6 @@ const AuthService = {
     return { tvUrl, ...response };
   },
 
-  /** GET /api/v1/games/history – sessions list. Query: page, limit, from, to (ISO date). */
-  gamesHistory: async (params = {}) => {
-    if (isDemoSession()) {
-      const page = Number(params.page ?? 1) || 1;
-      const limit = Number(params.limit ?? 10) || 10;
-      return { success: true, data: { sessions: [], pagination: { page, limit, total: 0, totalPages: 1 } } };
-    }
-    const token = sessionStorage.getItem("token");
-    if (!token) return { success: false, message: "Login required" };
-    const { baseBettingGames, bettingGamesHistory } = ApiConfig;
-    const q = new URLSearchParams();
-    q.set("page", String(params.page != null ? params.page : 1));
-    q.set("limit", String(params.limit != null ? params.limit : 10));
-    if (params.from) q.set("from", params.from);
-    if (params.to) q.set("to", params.to);
-    const url = `${baseBettingGames}${bettingGamesHistory}?${q.toString()}`;
-    const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
-    return ApiCallGet(url, headers);
-  },
-
-  /** GET /api/v1/games/transactions – rounds (game, date, bet, result, amount). Query: page, limit, gameCode, providerCode. */
-  gamesTransactions: async (page = 1, limit = 20, opts = {}) => {
-    if (isDemoSession()) {
-      return {
-        success: true,
-        data: { transactions: [], pagination: { page: Number(page) || 1, limit: Number(limit) || 20, total: 0, totalPages: 1 } },
-      };
-    }
-    const token = sessionStorage.getItem("token");
-    if (!token) return { success: false, message: "Login required" };
-    const { baseBettingGames, bettingGamesTransactions } = ApiConfig;
-    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-    if (opts.gameCode) params.set("gameCode", opts.gameCode);
-    if (opts.providerCode) params.set("providerCode", opts.providerCode);
-    const url = `${baseBettingGames}${bettingGamesTransactions}?${params.toString()}`;
-    const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
-    return ApiCallGet(url, headers);
-  },
-
-  /** GET /api/v1/games/transaction-history – ledger (date, credit, debit, balance, remark). Query: page, limit, from, to. */
-  gamesTransactionHistory: async (params = {}) => {
-    if (isDemoSession()) {
-      const page = Number(params.page ?? 1) || 1;
-      const limit = Number(params.limit ?? 20) || 20;
-      return { success: true, data: { transactions: [], pagination: { page, limit, total: 0, totalPages: 1 } } };
-    }
-    const token = sessionStorage.getItem("token");
-    if (!token) return { success: false, message: "Login required" };
-    const { baseBettingGames, bettingGamesTransactionHistory } = ApiConfig;
-    const q = new URLSearchParams();
-    q.set("page", String(params.page != null ? params.page : 1));
-    q.set("limit", String(params.limit != null ? params.limit : 20));
-    if (params.from) q.set("from", params.from);
-    if (params.to) q.set("to", params.to);
-    const url = `${baseBettingGames}${bettingGamesTransactionHistory}?${q.toString()}`;
-    const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
-    return ApiCallGet(url, headers);
-  },
-
-  /** GET /api/v1/games/sportsbook/transactions – auth required. Returns { status, data: { transactions, pagination } }. */
-  gamesSportsbookTransactions: async (page = 1, limit = 10) => {
-    if (isDemoSession()) {
-      return {
-        success: true,
-        data: { transactions: [], pagination: { page: Number(page) || 1, limit: Number(limit) || 10, total: 0, totalPages: 1 } },
-      };
-    }
-    const token = sessionStorage.getItem("token");
-    if (!token) return { status: "error", message: "Login required" };
-    const { baseBettingGames, gamesSportsbookTransactions } = ApiConfig;
-    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-    const url = `${baseBettingGames}${gamesSportsbookTransactions}?${params.toString()}`;
-    const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
-    return ApiCallGet(url, headers);
-  },
-
   /** GET /api/v1/games/sportsbook/transaction-history – auth required. Returns { status, data: { transactions, pagination } }. */
   gamesSportsbookTransactionHistory: async (page = 1, limit = 20) => {
     const token = sessionStorage.getItem("token");
@@ -754,36 +777,6 @@ const AuthService = {
     const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
     const body = dailyLossLimit == null || dailyLossLimit === "" ? { dailyLossLimit: null } : { dailyLossLimit: Number(dailyLossLimit) };
     return ApiCallPut(url, body, headers);
-  },
-
-  /** GET /api/v1/sportsbook/bet/open – Open bets. Query: gameId, marketType, sport, page, limit. Auth: Bearer. Response: { data: { bets: [...] } } or similar. */
-  sportsbookOpenBets: async (params = {}) => {
-    if (isDemoSession()) {
-      const page = Number(params.page ?? 1) || 1;
-      const limit = Number(params.limit ?? 20) || 20;
-      return { success: true, data: { bets: [], pagination: { page, limit, total: 0, totalPages: 1 } } };
-    }
-    const token = sessionStorage.getItem("token");
-    const { baseBettingSportsbook } = ApiConfig;
-    const q = new URLSearchParams(params).toString();
-    const url = `${baseBettingSportsbook}/bet/open${q ? `?${q}` : ""}`;
-    const headers = { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) };
-    return ApiCallGet(url, headers);
-  },
-
-  /** GET /api/v1/sportsbook/bet/history – Bet history. Query: page, limit, sport, from, to, result (won | lost | void). */
-  sportsbookBetHistory: async (params = {}) => {
-    if (isDemoSession()) {
-      const page = Number(params.page ?? 1) || 1;
-      const limit = Number(params.limit ?? 20) || 20;
-      return { success: true, data: { bets: [], pagination: { page, limit, total: 0, totalPages: 1 } } };
-    }
-    const token = sessionStorage.getItem("token");
-    const { baseBettingSportsbook } = ApiConfig;
-    const q = new URLSearchParams(params).toString();
-    const url = `${baseBettingSportsbook}/bet/history${q ? `?${q}` : ""}`;
-    const headers = { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) };
-    return ApiCallGet(url, headers);
   },
 
   /** GET /api/v1/sportsbook/bet/summary – Dashboard: openBetsCount, totalExposure, todayPnl. Define before /bet/:betId. */

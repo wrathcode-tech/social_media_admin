@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { bindToastPush } from '../utils/snackbarUtils';
 
 const ToastContext = createContext(null);
 
@@ -27,6 +28,11 @@ export function ToastProvider({ children }) {
   );
 
   const value = useMemo(() => ({ toast: push, dismiss }), [push, dismiss]);
+
+  useEffect(() => {
+    bindToastPush(push);
+    return () => bindToastPush(null);
+  }, [push]);
 
   return (
     <ToastContext.Provider value={value}>

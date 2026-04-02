@@ -1,6 +1,6 @@
 import axios from "axios";
-import { alertErrorMessage } from "../../customComponents/CustomAlertMessage";
-import { ApiConfig } from "../apiConfig/apiConfig";
+import { ApiConfig } from "./apiConfig";
+import { alertErrorMessage } from "../../utils/snackbarUtils";
 import { getStoredUserForGuard, isDemoUser, isDemoMutationUrlAllowed } from "../../utils/authUtils";
 
 // Default timeout of 30 seconds
@@ -8,11 +8,16 @@ const TIMEOUT = 30000;
 
 const DEMO_BLOCKED_ACTION_MSG = 'Demo users are not allowed to perform this action';
 
+const isAdminApiUrl = (url) => typeof url === 'string' && url.includes('/api/v1/admin/');
+
 const tokenExpire = (isDemo = false) => {
   alertErrorMessage(isDemo ? 'Demo session expired. Please login again.' : 'Token is Expired Please Login Again');
   sessionStorage.removeItem('token');
   sessionStorage.removeItem('refreshToken');
   sessionStorage.removeItem('user');
+  // Admin auth (new flow)
+  sessionStorage.removeItem('gtbs_admin_jwt');
+  sessionStorage.removeItem('gtbs_flicksy_admin_session');
   window.dispatchEvent(new CustomEvent('loginStateChange'));
   window.location.href = '/login';
 };
@@ -37,6 +42,10 @@ axios.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     if (error?.response?.status !== 401 || originalRequest.__retried) {
+      return Promise.reject(error);
+    }
+    // Admin APIs use a different auth/refresh flow. Don't force logout here.
+    if (isAdminApiUrl(originalRequest?.url)) {
       return Promise.reject(error);
     }
     if (originalRequest?.url?.includes(ApiConfig.bettingRefreshToken)) {
@@ -92,6 +101,10 @@ const handleApiError = (error) => {
   const errorCode = data.errorCode || data.code;
 
   if (status === 401) {
+    if (isAdminApiUrl(error.config?.url)) {
+      // Let the admin UI handle auth failures; don't hard-redirect to login.
+      return { success: false, message: message || 'Unauthorized.', errorCode };
+    }
     const isDemo = isDemoUser(getStoredUserForGuard());
     if (error.config?.headers?.Authorization) {
       tokenExpire(isDemo);

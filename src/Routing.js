@@ -12,7 +12,9 @@ const DashboardPage = lazyWithRetry(() => import('./pages/DashboardPage'));
 const UsersPage = lazyWithRetry(() => import('./pages/UsersPage'));
 const UserDetailPage = lazyWithRetry(() => import('./pages/UserDetailPage'));
 const PostsPage = lazyWithRetry(() => import('./pages/PostsPage'));
+const PostDetailPage = lazyWithRetry(() => import('./pages/PostDetailPage'));
 const ReelsPage = lazyWithRetry(() => import('./pages/ReelsPage'));
+const ReelDetailPage = lazyWithRetry(() => import('./pages/ReelDetailPage'));
 const StoriesPage = lazyWithRetry(() => import('./pages/StoriesPage'));
 const CommentsPage = lazyWithRetry(() => import('./pages/CommentsPage'));
 const ReportsPage = lazyWithRetry(() => import('./pages/ReportsPage'));
@@ -46,7 +48,9 @@ const Routing = memo(function Routing() {
                   <Route index element={<DashboardPage />} />
                   <Route path="users/:userId" element={<UserDetailPage />} />
                   <Route path="users" element={<UsersPage />} />
+                  <Route path="posts/:postId" element={<PostDetailPage />} />
                   <Route path="posts" element={<PostsPage />} />
+                  <Route path="reels/:reelId" element={<ReelDetailPage />} />
                   <Route path="reels" element={<ReelsPage />} />
                   <Route path="stories" element={<StoriesPage />} />
                   <Route path="comments" element={<CommentsPage />} />

@@ -9,6 +9,7 @@ import { TextField } from '../components/ui/TextField';
 import MediaThumb from '../components/ui/MediaThumb';
 import { notificationCampaignThumb } from '../lib/placeholders';
 import { useToast } from '../context/ToastContext';
+import './NotificationsPage.css';
 
 const SCOPE_OPTIONS = [
   { value: 'global', label: 'Global', hint: 'Everyone' },
@@ -252,10 +253,7 @@ export default function NotificationsPage() {
                 </div>
               ) : (
                 <div
-                  className="relative overflow-hidden rounded-2xl shadow-inner"
-                  style={{
-                    background: 'radial-gradient(120% 80% at 50% -20%, rgba(99,102,241,0.35), transparent), linear-gradient(165deg, #0f172a 0%, #1e1b4b 45%, #0f172a 100%)',
-                  }}
+                  className="notifications-lockPreviewBg relative overflow-hidden rounded-2xl shadow-inner"
                 >
                   <div className="relative px-4 pt-6 text-center">
                     <p className="text-[13px] font-medium text-white/45">

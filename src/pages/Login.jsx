@@ -1,43 +1,35 @@
-import { useEffect, useId, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useId, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { getBackendBase } from '../services/httpClient';
 import Button from '../components/ui/Button';
 import { TextField } from '../components/ui/TextField';
+import { alertErrorMessage, alertSuccessMessage } from '../utils/snackbarUtils';
 
 export default function Login() {
-  const { login, isAuthenticated } = useAuth();
+  const { login } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const location = useLocation();
-  const from = location.state?.from || '/';
-  const liveBackend = !!getBackendBase();
-  const showDevCredentials = process.env.NODE_ENV === 'development';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
   const pwdId = useId();
 
-  useEffect(() => {
-    if (isAuthenticated) navigate(from, { replace: true });
-  }, [isAuthenticated, from, navigate]);
-
-  async function handleSubmit(e) {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setBusy(true);
     try {
       const ok = await login(email, password);
-      if (!ok) setError(liveBackend ? 'Invalid email or password.' : 'Enter email and password to continue.');
-      else navigate(from, { replace: true });
-    } finally {
-      setBusy(false);
+      if (!ok) {
+        alertErrorMessage('Invalid credentials');
+        return;
+      }
+      navigate('/', { replace: true });
+      alertSuccessMessage('Signed in');
+    } catch (error) {
+      alertErrorMessage(error?.message);
     }
-  }
+  };
 
   return (
     <div className="relative min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-50 via-gray-100 to-gray-200 text-gray-900 dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-950 dark:text-zinc-100">
@@ -71,8 +63,7 @@ export default function Login() {
               </div>
               <div className="min-w-0 flex-1 pt-0.5">
                 <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-zinc-50">GTBS Flicksy</h1>
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-zinc-500">Admin Studio</p>
-                <p className="mt-2 text-sm text-gray-600 dark:text-zinc-400">Sign in with your super admin account.</p>
+                <p className="mt-2 text-sm text-gray-600 dark:text-zinc-400">Sign in with your admin account.</p>
               </div>
             </div>
 
@@ -141,18 +132,8 @@ export default function Login() {
                 </div>
               </div>
 
-              {error ? (
-                <div
-                  role="alert"
-                  aria-live="polite"
-                  className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-200"
-                >
-                  {error}
-                </div>
-              ) : null}
-
-              <Button type="submit" variant="primary" disabled={busy} className="w-full py-3 shadow-md">
-                {busy ? (
+              <Button type="submit" variant="primary" className="w-full py-3 shadow-md">
+                {true ? (
                   <span className="inline-flex items-center gap-2">
                     <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden>
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -169,36 +150,9 @@ export default function Login() {
                 )}
               </Button>
             </form>
-
-            <div className="mt-6 rounded-xl border border-gray-100 bg-gray-50/90 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950/60">
-              <p className="text-center text-xs leading-relaxed text-gray-600 dark:text-zinc-400">
-                {liveBackend ? (
-                  showDevCredentials ? (
-                    <>
-                      Local API: after{' '}
-                      <code className="rounded-md bg-gray-200/80 px-1.5 py-0.5 font-mono text-[11px] text-gray-800 dark:bg-zinc-800 dark:text-zinc-200">
-                        seed
-                      </code>
-                      , use{' '}
-                      <code className="rounded-md bg-gray-200/80 px-1.5 py-0.5 font-mono text-[11px] text-gray-800 dark:bg-zinc-800 dark:text-zinc-200">
-                        admin@gtbs.in
-                      </code>{' '}
-                      /{' '}
-                      <code className="rounded-md bg-gray-200/80 px-1.5 py-0.5 font-mono text-[11px] text-gray-800 dark:bg-zinc-800 dark:text-zinc-200">
-                        Admin123!
-                      </code>
-                    </>
-                  ) : (
-                    <>Use the admin credentials provided by your organization.</>
-                  )
-                ) : (
-                  <>Offline mode: any email and password will open the admin console (demo data).</>
-                )}
-              </p>
-            </div>
           </div>
 
-          <p className="mt-6 text-center text-[11px] text-gray-500 dark:text-zinc-600">Super admin access only · Secure session</p>
+          {/* <p className="mt-6 text-center text-[11px] text-gray-500 dark:text-zinc-600">Super admin access only · Secure session</p> */}
         </div>
       </div>
     </div>

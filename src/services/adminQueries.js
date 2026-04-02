@@ -1,6 +1,4 @@
-import { deleteJson, getJson, patchJson, postJson, putJson } from './httpClient';
-import { getStaticRuntime } from '../data/adminStaticRuntime.js';
-import { isAdminStaticDataMode } from '../lib/adminDataMode.js';
+import { deleteJson, getJson, patchJson, postJson, putJson } from './apiClient';
 
 function meta(total, page, limit) {
   return { total, page, pages: Math.max(1, Math.ceil(total / limit)), limit };
@@ -18,79 +16,31 @@ function parseDate(s) {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+const isAdminStaticDataMode = () => false;
+const getStaticRuntime = () => ({});
+
 export async function adminGetDashboardSummary() {
-  if (isAdminStaticDataMode()) {
-    const s = getStaticRuntime().summary;
-    return { ...s, reportsPending: getStaticRuntime().reports.filter((r) => r.status === 'pending').length };
-  }
-  return getJson('/admin/dashboard/summary');
+  return getJson('/api/v1/admin/dashboard/summary');
 }
 
 export async function adminGetDashboardGrowth(range) {
-  if (isAdminStaticDataMode()) {
-    const g = getStaticRuntime().growth;
-    if (range === 'daily') return { points: g.daily };
-    if (range === 'monthly') return { points: g.monthly };
-    return { points: g.weekly };
-  }
-  return getJson(`/admin/dashboard/growth?range=${encodeURIComponent(range || 'weekly')}`);
+  return getJson(`/api/v1/admin/dashboard/growth?range=${encodeURIComponent(range || 'weekly')}`);
 }
 
 export async function adminGetReportsQueue({ limit = 6, status = 'pending' } = {}) {
-  if (isAdminStaticDataMode()) {
-    let list = getStaticRuntime().reports;
-    if (status) list = list.filter((r) => r.status === status);
-    return { data: list.slice(0, limit) };
-  }
   const q = new URLSearchParams({ limit: String(limit) });
   if (status) q.set('status', status);
-  return getJson(`/admin/reports?${q}`);
+  return getJson(`/api/v1/admin/reports?${q}`);
 }
 
 export async function adminGetUsers({ page = 1, limit = 10, search = '', status = '' } = {}) {
-  if (isAdminStaticDataMode()) {
-    let list = getStaticRuntime().users.filter((u) => u.status !== 'deleted');
-    const q = search.trim().toLowerCase();
-    if (q) {
-      list = list.filter(
-        (u) => u.username.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
-      );
-    }
-    if (status === 'active' || status === 'blocked') list = list.filter((u) => u.status === status);
-    return paginate(list, page, limit);
-  }
   const params = new URLSearchParams({ page: String(page), limit: String(limit), search });
   if (status) params.set('status', status);
-  return getJson(`/admin/users?${params}`);
+  return getJson(`/api/v1/admin/users?${params}`);
 }
 
 export async function adminGetUser(userId) {
-  if (isAdminStaticDataMode()) {
-    const u = getStaticRuntime().users.find((x) => x._id === userId);
-    if (!u || u.status === 'deleted') throw new Error('Not found');
-    return { ...u };
-  }
-  return getJson(`/admin/users/${userId}`);
-}
-
-export async function adminPatchUserBlock(userId) {
-  if (isAdminStaticDataMode()) {
-    const u = getStaticRuntime().users.find((x) => x._id === userId);
-    if (!u) throw new Error('Not found');
-    u.status = 'blocked';
-    return { ...u };
-  }
-  return patchJson(`/admin/users/${userId}/block`, {});
-}
-
-export async function adminPatchUserUnblock(userId) {
-  if (isAdminStaticDataMode()) {
-    const u = getStaticRuntime().users.find((x) => x._id === userId);
-    if (!u) throw new Error('Not found');
-    u.status = 'active';
-    return { ...u };
-  }
-  return patchJson(`/admin/users/${userId}/unblock`, {});
+  return getJson(`/api/v1/admin/users/${userId}`);
 }
 
 export async function adminDeleteUser(userId) {
@@ -100,7 +50,7 @@ export async function adminDeleteUser(userId) {
     u.status = 'deleted';
     return { ok: true };
   }
-  return deleteJson(`/admin/users/${userId}`);
+  return deleteJson(`/api/v1/admin/users/${userId}`);
 }
 
 export async function adminGetUserLoginHistory(userId, limit = 20) {
@@ -119,7 +69,6 @@ export async function adminGetUserActivity(userId, limit = 20) {
   return getJson(`/admin/users/${userId}/activity?limit=${limit}`);
 }
 
-/** Admin manual wallet credit (promo/support); user-initiated payments stay in the consumer app. Amount in user wallet currency. */
 export async function adminPostUserAdCredit(userId, { amount, note = '' } = {}) {
   const n = Number(amount);
   if (!Number.isFinite(n) || n <= 0) throw new Error('Enter a valid amount greater than zero');
@@ -360,7 +309,6 @@ export async function adminGetFinancePayouts(limit = 30) {
   return getJson(`/admin/finance/payouts?limit=${limit}`);
 }
 
-/** User-initiated ad wallet / top-up requests (from the consumer app). */
 export async function adminGetAdPaymentRequests({ status = '', limit = 80 } = {}) {
   if (isAdminStaticDataMode()) {
     let list = [...(getStaticRuntime().adPaymentRequests || [])];

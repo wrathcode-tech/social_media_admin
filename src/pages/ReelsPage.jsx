@@ -1,13 +1,453 @@
-import ContentManager from './ContentManager';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import AuthService from '../api/services/AuthService';
+import PageShell from '../components/ui/PageShell';
+import PageHeader from '../components/ui/PageHeader';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import Modal from '../components/ui/Modal';
+import Badge from '../components/ui/Badge';
+import DataTable, { TBody, Td, Th, THead, Tr } from '../components/ui/DataTable';
+import PaginationBar from '../components/ui/PaginationBar';
+import MediaThumb from '../components/ui/MediaThumb';
+import { contentThumbUrl } from '../lib/placeholders';
+import { useToast } from '../context/ToastContext';
+import {
+  deriveModerationFlags,
+  filterReelsClientSide,
+  normalizeReelsListResponse,
+  reelListPreview,
+  reelRowId,
+} from './reelsUtils';
+
+function fmtDateTime(v) {
+  if (v == null || v === '') return '—';
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleString();
+}
 
 export default function ReelsPage() {
+  const [rows, setRows] = useState([]);
+  const [meta, setMeta] = useState({ page: 1, pages: 1 });
+  const [userFilter, setUserFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
+  const [moderateOpen, setModerateOpen] = useState(false);
+  const [moderateTargetId, setModerateTargetId] = useState('');
+  const [moderateDraft, setModerateDraft] = useState({ hidden: false, sensitive: false, restricted: false });
+  const [moderateSaving, setModerateSaving] = useState(false);
+  const { toast } = useToast();
+
+  const load = useCallback(
+    async (page = 1) => {
+      setLoading(true);
+      try {
+        const res = await AuthService.adminListReels({
+          page,
+          limit: 15,
+          userId: userFilter.trim(),
+          from: dateFrom,
+          to: dateTo,
+          status: statusFilter.trim(),
+        });
+        if (res && typeof res === 'object' && res.success === false) {
+          setErr(res.message || 'Failed to load reels');
+          setRows([]);
+          return;
+        }
+        const { list, meta: m } = normalizeReelsListResponse(res, { requestedPage: page, requestedLimit: 15 });
+        setRows(list);
+        setMeta(m);
+        setErr('');
+      } catch (e) {
+        setErr(e?.message || 'Failed to load reels');
+        setRows([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [userFilter, dateFrom, dateTo, statusFilter]
+  );
+
+  useEffect(() => {
+    load(1);
+  }, [load]);
+
+  const displayRows = useMemo(() => filterReelsClientSide(rows, search), [rows, search]);
+
+  const preview = (row) => reelListPreview(row);
+
+  const openModerate = (row) => {
+    const id = reelRowId(row);
+    if (!id) return;
+    setModerateTargetId(id);
+    setModerateDraft(deriveModerationFlags(row));
+    setModerateOpen(true);
+  };
+
+  const submitModerate = async (e) => {
+    e.preventDefault();
+    if (!moderateTargetId) return;
+    setModerateSaving(true);
+    try {
+      const res = await AuthService.adminModerateReel(moderateTargetId, {
+        hidden: moderateDraft.hidden,
+        sensitive: moderateDraft.sensitive,
+        restricted: moderateDraft.restricted,
+      });
+      if (res && typeof res === 'object' && res.success === false) {
+        throw new Error(res.message || 'Moderate failed');
+      }
+      setModerateOpen(false);
+      toast('Reel updated', 'success');
+      await load(meta.page);
+    } catch (e2) {
+      toast(e2?.message || 'Could not moderate reel', 'error');
+    } finally {
+      setModerateSaving(false);
+    }
+  };
+
+  const doRestore = async (id) => {
+    try {
+      const res = await AuthService.adminRestoreReel(id);
+      if (res && typeof res === 'object' && res.success === false) {
+        throw new Error(res.message || 'Restore failed');
+      }
+      toast('Reel restored', 'success');
+      await load(meta.page);
+    } catch (e) {
+      toast(e?.message || 'Could not restore', 'error');
+    }
+  };
+
+  const del = async (id) => {
+    if (!window.confirm('Permanently delete this reel?')) return;
+    try {
+      const res = await AuthService.adminDeleteReel(id);
+      if (res && typeof res === 'object' && res.success === false) {
+        throw new Error(res.message || 'Delete failed');
+      }
+      toast('Reel deleted', 'success');
+      await load(meta.page);
+    } catch (e) {
+      toast(e?.message || 'Could not delete', 'error');
+    }
+  };
+
+  const canRestore = (row) => {
+    const st = String(row?.status || '').toLowerCase();
+    return st === 'deleted' || st === 'hidden' || row?.isDeleted === true || row?.deletedAt;
+  };
+
+  const statusTone = (st) => {
+    const s = String(st || '').toLowerCase();
+    if (s === 'deleted') return 'danger';
+    if (s === 'hidden' || s === 'removed') return 'warning';
+    if (s === 'active' || s === 'published') return 'success';
+    return 'default';
+  };
+
   return (
-    <ContentManager
-      title="Reels"
-      description="Short video reels — moderation tools."
-      segment="reels"
-      showSensitive
-      showHide
-    />
+    <PageShell>
+      <PageHeader title="Reels" description="Short videos — list, moderate, restore, or delete via admin API." />
+      <Card className="shadow-lg" padding="p-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">
+            Author user id
+            <input
+              value={userFilter}
+              onChange={(e) => setUserFilter(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
+              placeholder="Filter by userId"
+            />
+          </label>
+          <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">
+            Search (this page)
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
+              placeholder="Caption, author, or reel id"
+            />
+          </label>
+          <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">
+            Status
+            <input
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
+              placeholder="e.g. active, hidden"
+            />
+          </label>
+          <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">
+            From
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
+            />
+          </label>
+          <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">
+            To
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
+            />
+          </label>
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={() => load(1)}
+              className="w-full rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:bg-blue-700"
+            >
+              Apply
+            </button>
+          </div>
+        </div>
+      </Card>
+
+      {err ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300">
+          {err}
+        </div>
+      ) : null}
+
+      <div className="hidden md:block">
+        <DataTable>
+          <THead>
+            <tr>
+              <Th>Preview</Th>
+              <Th>Author</Th>
+              <Th>Posted</Th>
+              <Th>Status</Th>
+              <Th className="text-right">Actions</Th>
+            </tr>
+          </THead>
+          <TBody>
+            {loading ? (
+              <Tr>
+                <Td colSpan={5} className="py-8 text-center text-gray-500">
+                  Loading…
+                </Td>
+              </Tr>
+            ) : rows.length === 0 ? (
+              <Tr>
+                <Td colSpan={5} className="py-8 text-center text-gray-500">
+                  No reels found.
+                </Td>
+              </Tr>
+            ) : displayRows.length === 0 ? (
+              <Tr>
+                <Td colSpan={5} className="py-8 text-center text-gray-500">
+                  No reels match your search on this page.
+                </Td>
+              </Tr>
+            ) : (
+              displayRows.map((row) => {
+                const id = reelRowId(row);
+                const flags = deriveModerationFlags(row);
+                return (
+                  <Tr key={id}>
+                    <Td>
+                      <div className="flex max-w-md items-start gap-3">
+                        <MediaThumb
+                          src={contentThumbUrl(row, 'reels')}
+                          className="h-14 w-14 shrink-0 rounded-xl border border-gray-200 dark:border-zinc-700"
+                        />
+                        <span className="min-w-0 flex-1 truncate text-xs leading-snug text-gray-700 dark:text-zinc-300">
+                          {preview(row)}
+                        </span>
+                      </div>
+                    </Td>
+                    <Td className="font-medium">@{row.author?.username || row.authorUsername || row.user?.username || '—'}</Td>
+                    <Td className="whitespace-nowrap text-sm text-gray-600 dark:text-zinc-400">{fmtDateTime(row.createdAt)}</Td>
+                    <Td>
+                      <Badge tone={statusTone(row.status)} className="capitalize">
+                        {row.status || '—'}
+                      </Badge>
+                      {flags.sensitive ? (
+                        <span className="ml-2">
+                          <Badge tone="warning">Sensitive</Badge>
+                        </span>
+                      ) : null}
+                      {flags.restricted ? (
+                        <span className="ml-2">
+                          <Badge tone="info">Restricted</Badge>
+                        </span>
+                      ) : null}
+                      {flags.hidden ? (
+                        <span className="ml-2">
+                          <Badge tone="default">Hidden</Badge>
+                        </span>
+                      ) : null}
+                    </Td>
+                    <Td className="text-right">
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <Link
+                          to={`/reels/${id}`}
+                          className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                          View
+                        </Link>
+                        <button
+                          type="button"
+                          className="text-sm font-medium text-violet-600 hover:underline dark:text-violet-400"
+                          onClick={() => openModerate(row)}
+                        >
+                          Moderate
+                        </button>
+                        {canRestore(row) ? (
+                          <button
+                            type="button"
+                            className="text-sm font-medium text-green-700 hover:underline dark:text-green-400"
+                            onClick={() => doRestore(id)}
+                          >
+                            Restore
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="text-sm font-medium text-red-600 hover:underline dark:text-red-400"
+                          onClick={() => del(id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </Td>
+                  </Tr>
+                );
+              })
+            )}
+          </TBody>
+        </DataTable>
+      </div>
+
+      <div className="space-y-3 md:hidden">
+        {loading ? (
+          <Card className="shadow-md" padding="p-6">
+            <p className="text-center text-sm text-gray-500 dark:text-zinc-400">Loading…</p>
+          </Card>
+        ) : rows.length === 0 ? (
+          <Card className="shadow-md" padding="p-6">
+            <p className="text-center text-sm text-gray-500 dark:text-zinc-400">No reels found.</p>
+          </Card>
+        ) : displayRows.length === 0 ? (
+          <Card className="shadow-md" padding="p-6">
+            <p className="text-center text-sm text-gray-500 dark:text-zinc-400">
+              No reels match your search on this page.
+            </p>
+          </Card>
+        ) : (
+          displayRows.map((row) => {
+            const id = reelRowId(row);
+            const flags = deriveModerationFlags(row);
+            return (
+              <Card key={id} className="shadow-md" padding="p-4">
+                <div className="flex gap-3">
+                  <MediaThumb
+                    src={contentThumbUrl(row, 'reels')}
+                    className="h-16 w-16 shrink-0 rounded-xl border border-gray-200 dark:border-zinc-700"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="line-clamp-3 text-xs leading-snug text-gray-700 dark:text-zinc-300">{preview(row)}</p>
+                    <p className="mt-2 text-sm font-medium text-gray-900 dark:text-zinc-100">
+                      @{row.author?.username || row.authorUsername || row.user?.username || '—'}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-zinc-500">{fmtDateTime(row.createdAt)}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Badge tone={statusTone(row.status)} className="capitalize">
+                        {row.status || '—'}
+                      </Badge>
+                      {flags.sensitive ? <Badge tone="warning">Sensitive</Badge> : null}
+                      {flags.restricted ? <Badge tone="info">Restricted</Badge> : null}
+                      {flags.hidden ? <Badge tone="default">Hidden</Badge> : null}
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-3 border-t border-gray-100 pt-3 dark:border-zinc-800">
+                      <Link to={`/reels/${id}`} className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                        View
+                      </Link>
+                      <button
+                        type="button"
+                        className="text-sm font-medium text-violet-600 dark:text-violet-400"
+                        onClick={() => openModerate(row)}
+                      >
+                        Moderate
+                      </button>
+                      {canRestore(row) ? (
+                        <button
+                          type="button"
+                          className="text-sm font-medium text-green-700 dark:text-green-400"
+                          onClick={() => doRestore(id)}
+                        >
+                          Restore
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="text-sm font-medium text-red-600 dark:text-red-400"
+                        onClick={() => del(id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            );
+          })
+        )}
+      </div>
+
+      <PaginationBar page={meta.page} pages={meta.pages} onPageChange={load} disabled={loading} />
+
+      <Modal
+        open={moderateOpen}
+        onClose={() => !moderateSaving && setModerateOpen(false)}
+        title="Moderate reel"
+        footer={
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="secondary" type="button" disabled={moderateSaving} onClick={() => setModerateOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit" form="moderate-reel-form" disabled={moderateSaving}>
+              {moderateSaving ? 'Saving…' : 'Save'}
+            </Button>
+          </div>
+        }
+      >
+        <form id="moderate-reel-form" className="space-y-3" onSubmit={submitModerate}>
+          <p className="text-sm text-gray-600 dark:text-zinc-400">
+            Sends <span className="font-medium text-gray-900 dark:text-zinc-100">PUT …/reels/:id/moderate</span> with{' '}
+            <span className="font-medium">isHidden / isSensitive / isRestricted</span>.
+          </p>
+          {[
+            ['hidden', 'Hidden (not visible in feed)'],
+            ['sensitive', 'Sensitive / NSFW'],
+            ['restricted', 'Restricted distribution'],
+          ].map(([key, label]) => (
+            <label
+              key={key}
+              className="flex cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-gray-50/80 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900/50"
+            >
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-zinc-600"
+                checked={moderateDraft[key]}
+                onChange={(e) => setModerateDraft((prev) => ({ ...prev, [key]: e.target.checked }))}
+              />
+              <span className="text-sm font-medium text-gray-900 dark:text-zinc-100">{label}</span>
+            </label>
+          ))}
+        </form>
+      </Modal>
+    </PageShell>
   );
 }

@@ -4,7 +4,7 @@ export const adminNavSections = [
     title: 'Overview',
     items: [
       { to: '/', label: 'Dashboard', end: true, keywords: 'home overview stats' },
-      { to: '/analytics', label: 'Analytics', keywords: 'metrics dau mau trending' },
+      // { to: '/analytics', label: 'Analytics', keywords: 'metrics dau mau trending' },
     ],
   },
   {

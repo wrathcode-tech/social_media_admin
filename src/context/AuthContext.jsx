@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { getBackendBase, getToken, loginAdmin, setToken } from '../services/httpClient';
+import AuthService from '../api/services/AuthService';
 
 export const AUTH_SESSION_KEY = 'gtbs_flicksy_admin_session';
 
@@ -22,46 +22,42 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (email, password) => {
     const e = email?.trim();
     if (!e || !password) return false;
-    const backendUrl = getBackendBase();
-    if (backendUrl) {
-      try {
-        const data = await loginAdmin(e, password);
-        setToken(data.token);
-        const next = {
-          email: data.admin.email,
-          name: data.admin.name || data.admin.email.split('@')[0],
-          role: data.admin.role,
-          fromServer: true,
-        };
-        sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(next));
-        setSession(next);
-        return true;
-      } catch {
-        return false;
-      }
+
+    try {
+      const res = await AuthService.adminLogin(e, password);
+      if (!res?.success) return false;
+
+      const token = res?.data?.accessToken || res?.data?.token || res?.accessToken || res?.token;
+      if (!token) return false;
+
+      const refreshToken = res?.data?.refreshToken || res?.refreshToken;
+
+      sessionStorage.setItem('token', token);
+      if (refreshToken) sessionStorage.setItem('refreshToken', refreshToken);
+
+      const next = {
+        email: res?.data?.admin?.email || e,
+        name: res?.data?.admin?.fullName || res?.data?.admin?.name || e.split('@')[0],
+        role: res?.data?.admin?.role || 'admin',
+      };
+      sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(next));
+      setSession(next);
+      return true;
+    } catch {
+      return false;
     }
-    const next = { email: e, name: e.split('@')[0] || 'Admin', role: 'super_admin', fromServer: false };
-    sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(next));
-    setSession(next);
-    return true;
   }, []);
 
   const logout = useCallback(() => {
     sessionStorage.removeItem(AUTH_SESSION_KEY);
-    setToken(null);
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('refreshToken');
     setSession(null);
   }, []);
 
-  const isAuthenticated = useMemo(() => {
-    if (!session) return false;
-    if (getBackendBase() && !getToken()) return false;
-    return true;
-  }, [session]);
+  const isAuthenticated = !!sessionStorage.getItem('token');
 
-  const value = useMemo(
-    () => ({ session, login, logout, isAuthenticated }),
-    [session, login, logout, isAuthenticated]
-  );
+  const value = useMemo(() => ({ session, login, logout, isAuthenticated }), [session, login, logout, isAuthenticated]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
