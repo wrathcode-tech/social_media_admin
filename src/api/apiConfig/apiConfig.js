@@ -1,8 +1,8 @@
 
 
 // Betting backend base URL. Use REACT_APP_BETTING_API_URL (or VITE_API_URL in Vite). Doc: BASE_URL/api/v1.
-// const bettingUrl = process.env.REACT_APP_BETTING_API_URL || process.env.VITE_API_URL || "https://backend.gtbsflicksy.com";
-const bettingUrl = process.env.REACT_APP_BETTING_API_URL || process.env.VITE_API_URL || "http://192.168.1.5:5173";
+const bettingUrl = process.env.REACT_APP_BETTING_API_URL || process.env.VITE_API_URL || "https://backend.gtbsflicksy.com";
+// const bettingUrl = process.env.REACT_APP_BETTING_API_URL || process.env.VITE_API_URL || "http://192.168.1.5:5173";
 
 
 
