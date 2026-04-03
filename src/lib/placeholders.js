@@ -13,7 +13,11 @@ export function userAvatarUrl(u) {
 }
 
 function postMediaThumbUrl(row) {
-  const media = row?.media;
+  let media = row?.media;
+  /** Stories API: `media` is a single `{ type, url }` object; posts/reels use `media[]`. */
+  if (media && typeof media === 'object' && !Array.isArray(media)) {
+    media = [media];
+  }
   if (!Array.isArray(media) || media.length === 0) return null;
   const m0 = media[0];
   if (!m0 || typeof m0 !== 'object') return null;
@@ -35,7 +39,7 @@ export function contentThumbUrl(row, segment) {
   if (row?.thumbnailUrl) return row.thumbnailUrl;
   if (row?.coverUrl) return row.coverUrl;
   if (row?.imageUrl) return row.imageUrl;
-  if (segment === 'posts' || segment === 'reels') {
+  if (segment === 'posts' || segment === 'reels' || segment === 'stories') {
     const fromMedia = postMediaThumbUrl(row);
     if (fromMedia) return fromMedia;
   }

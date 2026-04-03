@@ -9,6 +9,7 @@ import PageShell from '../components/ui/PageShell';
 import PageHeader from '../components/ui/PageHeader';
 import Card from '../components/ui/Card';
 import DataTable, { TBody, Td, Th, THead, Tr } from '../components/ui/DataTable';
+import { DataTableSkeleton, MediaRowCardSkeleton } from '../components/ui/Skeleton';
 import Badge from '../components/ui/Badge';
 import PaginationBar from '../components/ui/PaginationBar';
 import MediaThumb from '../components/ui/MediaThumb';
@@ -148,11 +149,7 @@ export default function ContentManager({ title, description, segment, showSensit
           </THead>
           <TBody>
             {loading ? (
-              <Tr>
-                <Td colSpan={5} className="py-8 text-center text-gray-500">
-                  Loading…
-                </Td>
-              </Tr>
+              <DataTableSkeleton rows={8} cols={5} />
             ) : (
               rows.map((row) => (
                 <Tr key={row._id}>
@@ -216,9 +213,7 @@ export default function ContentManager({ title, description, segment, showSensit
       </div>
       <div className="space-y-3 md:hidden">
         {loading ? (
-          <Card className="shadow-md" padding="p-6">
-            <p className="text-center text-sm text-gray-500 dark:text-zinc-400">Loading…</p>
-          </Card>
+          <MediaRowCardSkeleton count={5} />
         ) : (
           rows.map((row) => (
             <Card key={row._id} className="shadow-md" padding="p-4">

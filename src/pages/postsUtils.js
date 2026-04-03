@@ -44,8 +44,10 @@ export function deriveModerationFlags(post) {
 export function extractPostsArray(res) {
   if (!res || typeof res !== 'object') return [];
   const raw = res.data;
+  const nestedPosts = raw && typeof raw === 'object' && raw.data && typeof raw.data === 'object' ? raw.data.posts : null;
   const candidates = [
     raw?.posts,
+    Array.isArray(nestedPosts) ? nestedPosts : null,
     res.posts,
     Array.isArray(raw) ? raw : null,
     raw?.data,
@@ -72,7 +74,7 @@ export function normalizePostsListResponse(res, { requestedPage = 1, requestedLi
   ) || requestedPage;
   /** API often returns `count` = items in this page, `total` = full list count (top-level or in data). */
   const limit = Number(
-    pag.limit ?? pag.perPage ?? raw?.limit ?? res?.count ?? requestedLimit
+    pag.limit ?? pag.perPage ?? raw?.limit ?? raw?.count ?? res?.count ?? requestedLimit
   ) || requestedLimit;
   const total =
     pag.total ??
@@ -117,6 +119,17 @@ export function postListPreview(row) {
   }
   if (bits.length) return bits.join(' · ');
   return row.mediaUrl || row.videoUrl || '—';
+}
+
+/** Likes / comments line for list rows (matches admin list payload). */
+export function postListStatsLine(row) {
+  if (!row || typeof row !== 'object') return '';
+  const bits = [];
+  const likes = row.likesCount;
+  const comments = row.commentsCount;
+  if (likes != null && likes !== '') bits.push(`${likes} likes`);
+  if (comments != null && comments !== '') bits.push(`${comments} comments`);
+  return bits.length ? bits.join(' · ') : '';
 }
 
 /** Client-only filter for posts list (caption, author, id). */

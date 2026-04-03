@@ -1,111 +1,113 @@
 import { useEffect, useState } from 'react';
-import { adminGetSettingsAdmins, adminGetSettingsApp, adminPutSettingsAppKey } from '../services/adminQueries';
+import AuthService from '../api/services/AuthService';
 import PageShell from '../components/ui/PageShell';
 import PageHeader from '../components/ui/PageHeader';
 import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
 import Toggle from '../components/ui/Toggle';
-import DataTable, { TBody, Td, Th, THead, Tr } from '../components/ui/DataTable';
-import Badge from '../components/ui/Badge';
+import { MaintenanceFormSkeleton } from '../components/ui/Skeleton';
+import { useToast } from '../context/ToastContext';
+
+function isApiError(res) {
+  return res && typeof res === 'object' && res.success === false;
+}
+
 export default function SettingsPage() {
-  const [settings, setSettings] = useState({});
-  const [admins, setAdmins] = useState([]);
-  const [err, setErr] = useState('');
+  const { toast } = useToast();
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const [s, a] = await Promise.all([adminGetSettingsApp(), adminGetSettingsAdmins()]);
-        setSettings(s || {});
-        setAdmins(a.data || []);
-        setErr('');
-      } catch (e) {
-        setErr(e.message);
-      }
-    })();
-  }, []);
+  const [maintEnabled, setMaintEnabled] = useState(false);
+  const [maintMessage, setMaintMessage] = useState('');
+  const [maintLoading, setMaintLoading] = useState(true);
+  const [maintSaving, setMaintSaving] = useState(false);
+  const [maintErr, setMaintErr] = useState('');
 
-  const saveKey = async (key, value) => {
+  const inputClass =
+    'mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100';
+
+  const maintenanceStatus = async () => {
     try {
-      await adminPutSettingsAppKey(key, value);
-      setSettings((prev) => ({ ...prev, [key]: value }));
+      const res = await AuthService.adminGetSettingsMaintenance();
+      if (isApiError(res)) {
+        setMaintErr(res.message || 'Could not load');
+      } else {
+        const d = res?.data != null && typeof res.data === 'object' ? res.data : res;
+        setMaintEnabled(Boolean(d?.enabled ?? d?.isEnabled));
+        setMaintMessage(String(d?.message ?? d?.msg ?? ''));
+      }
     } catch (e) {
-      setErr(e.message);
+      setMaintErr(e?.message || 'Could not load');
+    } finally {
+      setMaintLoading(false);
     }
   };
 
+  const saveMaintenance = async (e) => {
+    e?.preventDefault();
+    setMaintSaving(true);
+    setMaintErr('');
+    try {
+      const res = await AuthService.adminPutSettingsMaintenance(maintEnabled, maintMessage);
+      if (isApiError(res)) {
+        setMaintErr(res.message || 'Save failed');
+        toast(res.message || 'Save failed', 'error');
+      } else {
+        toast('Maintenance updated', 'success');
+      }
+    } catch (e2) {
+      const msg = e2?.message || 'Save failed';
+      setMaintErr(msg);
+      toast(msg, 'error');
+    } finally {
+      setMaintSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    maintenanceStatus();
+  }, []);
+
   return (
     <PageShell>
-      <PageHeader title="Settings" description="App config and security." />
-      {err ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{err}</div> : null}
+      <PageHeader title="Settings" description="Maintenance mode for the app." />
+
       <Card className="shadow-lg" padding="p-4 md:p-6">
-        <h2 className="text-lg font-semibold dark:text-zinc-50">App</h2>
-        <label className="mt-4 block text-sm gap-2 flex flex-row items-center font-medium text-gray-700 dark:text-zinc-300">
-          App name
-          <input
-            defaultValue={settings.appName || ''}
-            onBlur={(e) => saveKey('appName', e.target.value)}
-            className="mt-1 w-full max-w-md rounded-xl border border-gray-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
-          />
-        </label>
-      </Card>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Toggle
-          id="maint"
-          label="Maintenance mode"
-          description="Show maintenance to end users."
-          checked={!!settings.maintenanceMode}
-          onChange={(v) => saveKey('maintenanceMode', v)}
-        />
-        <Toggle
-          id="twofa"
-          label="Require 2FA for admins"
-          description="Flag for future TOTP enforcement."
-          checked={!!settings.twoFactorRequired}
-          onChange={(v) => saveKey('twoFactorRequired', v)}
-        />
-      </div>
-      <Card className="shadow-lg" padding="p-4 md:p-6">
-        <h2 className="text-lg font-semibold dark:text-zinc-50">Security</h2>
-        <p className="mt-2 text-sm text-gray-500 dark:text-zinc-400">
-          IP allowlist: server env <code className="rounded-lg bg-gray-100 px-1 dark:bg-zinc-800">ADMIN_IP_WHITELIST</code>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-50">Maintenance</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
+          Control global maintenance mode and user-facing message.
         </p>
-      </Card>
-      <Card className="shadow-lg" padding="p-4 md:p-6">
-        <h2 className="text-lg font-semibold dark:text-zinc-50">Admin account</h2>
-        <div className="mt-4 hidden md:block">
-          <DataTable className="border-0 shadow-none dark:bg-transparent">
-            <THead>
-              <tr>
-                <Th>Email</Th>
-                <Th>Role</Th>
-              </tr>
-            </THead>
-            <TBody>
-              {admins.map((a) => (
-                <Tr key={a._id}>
-                  <Td className="font-medium">{a.email}</Td>
-                  <Td>
-                    <Badge tone={a.role === 'super_admin' ? 'purple' : 'info'} className="capitalize">
-                      {a.role?.replace('_', ' ')}
-                    </Badge>
-                  </Td>
-                </Tr>
-              ))}
-            </TBody>
-          </DataTable>
-        </div>
-        <div className="mt-4 space-y-3 md:hidden">
-          {admins.map((a) => (
-            <Card key={a._id} className="shadow-md" padding="p-4">
-              <p className="font-medium text-gray-900 dark:text-zinc-50">{a.email}</p>
-              <div className="mt-2">
-                <Badge tone={a.role === 'super_admin' ? 'purple' : 'info'} className="capitalize">
-                  {a.role?.replace('_', ' ')}
-                </Badge>
-              </div>
-            </Card>
-          ))}
-        </div>
+
+        {maintErr ? (
+          <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+            {maintErr}
+          </p>
+        ) : null}
+
+        {maintLoading ? (
+          <MaintenanceFormSkeleton />
+        ) : (
+          <form className="mt-4 space-y-4" onSubmit={saveMaintenance}>
+            <Toggle
+              id="maint-api"
+              label="Maintenance enabled"
+              description="When on, clients will show the maintenance message."
+              checked={maintEnabled}
+              onChange={setMaintEnabled}
+            />
+            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
+              Message
+              <textarea
+                value={maintMessage}
+                onChange={(e) => setMaintMessage(e.target.value)}
+                rows={3}
+                placeholder="Under maintenance, back soon!"
+                className={`${inputClass} resize-y placeholder:text-gray-400 dark:placeholder:text-zinc-600`}
+              />
+            </label>
+            <Button type="submit" variant="primary" disabled={maintSaving}>
+              {maintSaving ? 'Saving…' : 'Save maintenance'}
+            </Button>
+          </form>
+        )}
       </Card>
     </PageShell>
   );

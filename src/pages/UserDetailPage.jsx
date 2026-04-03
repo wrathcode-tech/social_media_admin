@@ -10,6 +10,7 @@ import Modal from '../components/ui/Modal';
 import { TextField } from '../components/ui/TextField';
 import { useToast } from '../context/ToastContext';
 import MediaThumb from '../components/ui/MediaThumb';
+import { UserDetailPageSkeleton } from '../components/ui/Skeleton';
 import { userAvatarUrl } from '../lib/placeholders';
 
 function fmtDate(v) {
@@ -296,7 +297,7 @@ export default function UserDetailPage() {
   if (loadingUser || (!user && !err)) {
     return (
       <PageShell>
-        <p className="text-sm text-gray-500 dark:text-zinc-400">Loading…</p>
+        <UserDetailPageSkeleton />
       </PageShell>
     );
   }

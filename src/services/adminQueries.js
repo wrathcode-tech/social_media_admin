@@ -1,4 +1,4 @@
-import { deleteJson, getJson, patchJson, postJson, putJson } from './apiClient';
+import { deleteJson, getJson, patchJson, postJson } from './apiClient';
 
 function meta(total, page, limit) {
   return { total, page, pages: Math.max(1, Math.ceil(total / limit)), limit };
@@ -278,28 +278,6 @@ export async function adminGetAnalyticsBundle() {
     getJson('/admin/analytics/trending/hashtags'),
   ]);
   return { overview, trendingPosts, trendingReels, hashtags };
-}
-
-export async function adminGetSettingsApp() {
-  if (isAdminStaticDataMode()) {
-    return { ...getStaticRuntime().settingsApp };
-  }
-  return getJson('/admin/settings/app');
-}
-
-export async function adminGetSettingsAdmins() {
-  if (isAdminStaticDataMode()) {
-    return { data: [...getStaticRuntime().admins] };
-  }
-  return getJson('/admin/settings/admins');
-}
-
-export async function adminPutSettingsAppKey(key, value) {
-  if (isAdminStaticDataMode()) {
-    getStaticRuntime().settingsApp[key] = value;
-    return { ok: true };
-  }
-  return putJson(`/admin/settings/app/${encodeURIComponent(key)}`, { value });
 }
 
 export async function adminGetFinancePayouts(limit = 30) {

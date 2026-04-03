@@ -17,31 +17,31 @@ export const adminNavSections = [
       { to: '/comments', label: 'Comments', keywords: 'replies moderation' },
     ],
   },
-  {
-    title: 'Trust & safety',
-    items: [
-      { to: '/reports', label: 'Reports', keywords: 'abuse spam moderation queue' },
-      { to: '/logs', label: 'Logs', keywords: 'audit activity admin' },
-    ],
-  },
+  // {
+  //   title: 'Trust & safety',
+  //   items: [
+  //     { to: '/reports', label: 'Reports', keywords: 'abuse spam moderation queue' },
+  //     { to: '/logs', label: 'Logs', keywords: 'audit activity admin' },
+  //   ],
+  // },
   {
     title: 'Growth & revenue',
     items: [
       { to: '/notifications', label: 'Notifications', keywords: 'push campaigns' },
-      { to: '/ads', label: 'Ads', keywords: 'advertising placements' },
-      {
-        label: 'Finance',
-        keywords: 'payouts transactions wallet ledger finance',
-        pathPrefix: '/finance',
-        children: [
-          { to: '/finance', label: 'Overview', end: true, keywords: 'payouts withdrawals ledger' },
-          {
-            to: '/finance/ad-payments',
-            label: 'Ad payments',
-            keywords: 'wallet topup user requests promoted ads payment queue',
-          },
-        ],
-      },
+      // { to: '/ads', label: 'Ads', keywords: 'advertising placements' },
+      // {
+      //   label: 'Finance',
+      //   keywords: 'payouts transactions wallet ledger finance',
+      //   pathPrefix: '/finance',
+      //   children: [
+      //     { to: '/finance', label: 'Overview', end: true, keywords: 'payouts withdrawals ledger' },
+      //     {
+      //       to: '/finance/ad-payments',
+      //       label: 'Ad payments',
+      //       keywords: 'wallet topup user requests promoted ads payment queue',
+      //     },
+      //   ],
+      // },
     ],
   },
   {

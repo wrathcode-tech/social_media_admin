@@ -7,6 +7,7 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Badge from '../components/ui/Badge';
 import MediaThumb from '../components/ui/MediaThumb';
+import { ContentDetailPageSkeleton } from '../components/ui/Skeleton';
 import { contentThumbUrl } from '../lib/placeholders';
 import { useToast } from '../context/ToastContext';
 import { deriveModerationFlags, parseReelFromGetResponse, reelListPreview, reelRowId } from './reelsUtils';
@@ -145,7 +146,7 @@ export default function ReelDetailPage() {
   if (loading && !reel && !err) {
     return (
       <PageShell>
-        <p className="text-sm text-gray-500 dark:text-zinc-400">Loading…</p>
+        <ContentDetailPageSkeleton />
       </PageShell>
     );
   }

@@ -6,6 +6,7 @@ import { adminNavSections } from '../../config/adminNav';
 import CommandPalette from '../ui/CommandPalette';
 import Badge from '../ui/Badge';
 import MediaThumb from '../ui/MediaThumb';
+import BrandLogo from '../ui/BrandLogo';
 import { userAvatarUrl } from '../../lib/placeholders';
 
 function NavGroup({ label, pathPrefix, children, onPick }) {
@@ -30,11 +31,10 @@ function NavGroup({ label, pathPrefix, children, onPick }) {
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800/80 ${
-          under
+        className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800/80 ${under
             ? 'text-gray-900 dark:text-zinc-100'
             : 'text-gray-600 dark:text-zinc-300'
-        }`}
+          }`}
       >
         <span>{label}</span>
         <svg
@@ -56,10 +56,9 @@ function NavGroup({ label, pathPrefix, children, onPick }) {
               end={child.end}
               onClick={onPick}
               className={({ isActive }) =>
-                `rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ease-in-out ${
-                  isActive
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/25'
-                    : 'text-gray-600 hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800/80'
+                `rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ease-in-out ${isActive
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/25'
+                  : 'text-gray-600 hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800/80'
                 }`
               }
             >
@@ -114,26 +113,18 @@ export default function AdminShell() {
       <button
         type="button"
         aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
-        className={`fixed inset-0 z-40 bg-gray-900/40 backdrop-blur-sm transition-opacity duration-200 ease-in-out lg:hidden ${
-          mobileOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
-        }`}
+        className={`fixed inset-0 z-40 bg-gray-900/40 backdrop-blur-sm transition-opacity duration-200 ease-in-out lg:hidden ${mobileOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+          }`}
         onClick={() => setMobileOpen(false)}
       />
 
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen w-64 flex-col border-r border-gray-200/80 bg-white/95 shadow-xl shadow-gray-200/40 backdrop-blur-md transition-transform duration-200 ease-in-out dark:border-zinc-800 dark:bg-zinc-900/95 dark:shadow-none lg:translate-x-0 ${
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed left-0 top-0 z-50 flex h-screen w-64 flex-col border-r border-gray-200/80 bg-white/95 shadow-xl shadow-gray-200/40 backdrop-blur-md transition-transform duration-200 ease-in-out dark:border-zinc-800 dark:bg-zinc-900/95 dark:shadow-none lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
       >
         <div className="border-b border-gray-200/80 px-4 py-5 dark:border-zinc-800">
-          <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-sm font-bold text-white shadow-md">
-              GF
-            </div>
-            <div>
-              <div className="text-base font-bold tracking-tight text-gray-900 dark:text-zinc-50">GTBS Flicksy</div>
-              <div className="text-[11px] font-medium uppercase tracking-wider text-gray-400 dark:text-zinc-500">Admin Studio</div>
-            </div>
+          <div className="flex flex-col gap-2">
+            <BrandLogo className="h-9 w-full max-w-[11rem]" />
           </div>
         </div>
         <nav className="flex flex-1 flex-col gap-4 overflow-y-auto p-3">
@@ -159,10 +150,9 @@ export default function AdminShell() {
                       end={item.end}
                       onClick={() => setMobileOpen(false)}
                       className={({ isActive }) =>
-                        `rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ease-in-out ${
-                          isActive
-                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/25'
-                            : 'text-gray-600 hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800/80'
+                        `rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ease-in-out ${isActive
+                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/25'
+                          : 'text-gray-600 hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800/80'
                         }`
                       }
                     >

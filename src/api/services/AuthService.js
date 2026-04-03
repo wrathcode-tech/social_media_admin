@@ -259,6 +259,270 @@ const AuthService = {
     return ApiCallPut(url, payload, headers);
   },
 
+  /** GET /api/v1/admin/content/stories — query: page, limit, userId, from, to, status */
+  adminListStories: async ({
+    page = 1,
+    limit = 15,
+    userId = '',
+    authorId = '',
+    from = '',
+    to = '',
+    status = '',
+  } = {}) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminPosts, storiesList } = ApiConfig;
+    const q = new URLSearchParams({ page: String(page), limit: String(limit) });
+    const uid = String(userId || authorId || "").trim();
+    if (uid) q.set("userId", uid);
+    if (String(from).trim()) q.set("from", String(from).trim());
+    if (String(to).trim()) q.set("to", String(to).trim());
+    if (String(status).trim()) q.set("status", String(status).trim());
+    const url = `${baseAdminPosts}${storiesList}?${q}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallGet(url, headers);
+  },
+
+  /** GET /api/v1/admin/content/stories/:id */
+  adminGetStory: async (storyId) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminPosts, storiesList } = ApiConfig;
+    const id = encodeURIComponent(String(storyId ?? "").trim());
+    if (!id) return { success: false, message: "Invalid story id" };
+    const url = `${baseAdminPosts}${storiesList}/${id}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallGet(url, headers);
+  },
+
+  /** DELETE /api/v1/admin/content/stories/:id */
+  adminDeleteStory: async (storyId) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminPosts, storiesList } = ApiConfig;
+    const id = encodeURIComponent(String(storyId ?? "").trim());
+    if (!id) return { success: false, message: "Invalid story id" };
+    const url = `${baseAdminPosts}${storiesList}/${id}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallDelete(url, headers);
+  },
+
+  /** GET /api/v1/admin/content/posts/:postId/comments */
+  adminListPostComments: async (postId) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminPosts, postsList } = ApiConfig;
+    const pid = encodeURIComponent(String(postId ?? "").trim());
+    if (!pid) return { success: false, message: "Invalid post id" };
+    const url = `${baseAdminPosts}${postsList}/${pid}/comments`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallGet(url, headers);
+  },
+
+  /** DELETE /api/v1/admin/content/posts/:postId/comments/:commentId */
+  adminDeletePostComment: async (postId, commentId) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminPosts, postsList } = ApiConfig;
+    const pid = encodeURIComponent(String(postId ?? "").trim());
+    const cid = encodeURIComponent(String(commentId ?? "").trim());
+    if (!pid || !cid) return { success: false, message: "Invalid post or comment id" };
+    const url = `${baseAdminPosts}${postsList}/${pid}/comments/${cid}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallDelete(url, headers);
+  },
+
+  /** DELETE .../posts/:postId/comments/:commentId/replies/:replyId */
+  adminDeletePostCommentReply: async (postId, commentId, replyId) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminPosts, postsList } = ApiConfig;
+    const pid = encodeURIComponent(String(postId ?? "").trim());
+    const cid = encodeURIComponent(String(commentId ?? "").trim());
+    const rid = encodeURIComponent(String(replyId ?? "").trim());
+    if (!pid || !cid || !rid) return { success: false, message: "Invalid ids" };
+    const url = `${baseAdminPosts}${postsList}/${pid}/comments/${cid}/replies/${rid}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallDelete(url, headers);
+  },
+
+  /** GET /api/v1/admin/content/reels/:reelId/comments (same prefix as adminListReels) */
+  adminListReelComments: async (reelId) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminPosts, reelsList } = ApiConfig;
+    const rid = encodeURIComponent(String(reelId ?? "").trim());
+    if (!rid) return { success: false, message: "Invalid reel id" };
+    const url = `${baseAdminPosts}${reelsList}/${rid}/comments`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallGet(url, headers);
+  },
+
+  /** DELETE /api/v1/admin/content/reels/:reelId/comments/:commentId */
+  adminDeleteReelComment: async (reelId, commentId) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminPosts, reelsList } = ApiConfig;
+    const rid = encodeURIComponent(String(reelId ?? "").trim());
+    const cid = encodeURIComponent(String(commentId ?? "").trim());
+    if (!rid || !cid) return { success: false, message: "Invalid reel or comment id" };
+    const url = `${baseAdminPosts}${reelsList}/${rid}/comments/${cid}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallDelete(url, headers);
+  },
+
+  /** DELETE /api/v1/admin/content/reels/:reelId/comments/:commentId/replies/:replyId */
+  adminDeleteReelCommentReply: async (reelId, commentId, replyId) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminPosts, reelsList } = ApiConfig;
+    const rid = encodeURIComponent(String(reelId ?? "").trim());
+    const cid = encodeURIComponent(String(commentId ?? "").trim());
+    const rpid = encodeURIComponent(String(replyId ?? "").trim());
+    if (!rid || !cid || !rpid) return { success: false, message: "Invalid ids" };
+    const url = `${baseAdminPosts}${reelsList}/${rid}/comments/${cid}/replies/${rpid}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallDelete(url, headers);
+  },
+
+  // --------------------------------------------------------------------------
+  // Reports microservice (see ApiConfig.baseReports)
+  // --------------------------------------------------------------------------
+
+  /** GET …/reports/stats */
+  adminReportsStats: async () => {
+    const token = sessionStorage.getItem("token");
+    const { baseReports } = ApiConfig;
+    const url = `${baseReports}/stats`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallGet(url, headers);
+  },
+
+  /** GET …/reports?page=&limit= (query optional) */
+  adminReportsList: async ({ page = 1, limit = 20 } = {}) => {
+    const token = sessionStorage.getItem("token");
+    const { baseReports } = ApiConfig;
+    const q = new URLSearchParams();
+    if (page != null) q.set("page", String(page));
+    if (limit != null) q.set("limit", String(limit));
+    const qs = q.toString();
+    const url = qs ? `${baseReports}?${qs}` : `${baseReports}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallGet(url, headers);
+  },
+
+  /** GET …/reports/:id (fully populated) */
+  adminGetReport: async (reportId) => {
+    const token = sessionStorage.getItem("token");
+    const { baseReports } = ApiConfig;
+    const id = encodeURIComponent(String(reportId ?? "").trim());
+    if (!id) return { success: false, message: "Invalid report id" };
+    const url = `${baseReports}/${id}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallGet(url, headers);
+  },
+
+  /** GET …/reports/user/:userId */
+  adminReportsByUser: async (userId) => {
+    const token = sessionStorage.getItem("token");
+    const { baseReports } = ApiConfig;
+    const uid = encodeURIComponent(String(userId ?? "").trim());
+    if (!uid) return { success: false, message: "Invalid user id" };
+    const url = `${baseReports}/user/${uid}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallGet(url, headers);
+  },
+
+  /** GET …/reports/post/:postId */
+  adminReportsByPost: async (postId) => {
+    const token = sessionStorage.getItem("token");
+    const { baseReports } = ApiConfig;
+    const pid = encodeURIComponent(String(postId ?? "").trim());
+    if (!pid) return { success: false, message: "Invalid post id" };
+    const url = `${baseReports}/post/${pid}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallGet(url, headers);
+  },
+
+  /** GET …/reports/reel/:reelId */
+  adminReportsByReel: async (reelId) => {
+    const token = sessionStorage.getItem("token");
+    const { baseReports } = ApiConfig;
+    const rid = encodeURIComponent(String(reelId ?? "").trim());
+    if (!rid) return { success: false, message: "Invalid reel id" };
+    const url = `${baseReports}/reel/${rid}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallGet(url, headers);
+  },
+
+  /** GET /api/v1/admin/settings/maintenance */
+  adminGetSettingsMaintenance: async () => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminSettings, maintenanceStatus } = ApiConfig;
+    const url = `${baseAdminSettings + maintenanceStatus}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallGet(url, headers);
+  },
+
+  /** PUT /api/v1/admin/settings/maintenance — { enabled, message } */
+  adminPutSettingsMaintenance: async (enabled, message) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminSettings, maintenanceSave } = ApiConfig;
+    const url = `${baseAdminSettings + maintenanceSave}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const payload = {
+      enabled: Boolean(enabled),
+      message: message,
+    };
+    return ApiCallPut(url, payload, headers);
+  },
+
+  /** GET /api/v1/admin/settings/notifications?page=&limit= */
+  adminListSettingsNotifications: async ({ page = 1, limit = 20 } = {}) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminSettingsNotifications } = ApiConfig;
+    const q = new URLSearchParams({ page: String(page), limit: String(limit) });
+    const url = `${baseAdminSettingsNotifications}?${q}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallGet(url, headers);
+  },
+
+  /** POST /api/v1/admin/settings/notifications — { title, body, type, data } */
+  adminCreateSettingsNotification: async ({ title, body, type = "all", data = {} } = {}) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminSettingsNotifications } = ApiConfig;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const payload = {
+      title: title != null ? String(title).trim() : "",
+      body: body != null ? String(body).trim() : "",
+      type: type != null ? String(type) : "all",
+      data: data && typeof data === "object" && !Array.isArray(data) ? data : {},
+    };
+    return ApiCallPost(baseAdminSettingsNotifications, payload, headers);
+  },
+
+  /** DELETE /api/v1/admin/settings/notifications/:id */
+  adminDeleteSettingsNotification: async (notificationId) => {
+    const token = sessionStorage.getItem("token");
+    const { baseAdminSettingsNotifications } = ApiConfig;
+    const id = encodeURIComponent(String(notificationId ?? "").trim());
+    if (!id) return { success: false, message: "Invalid notification id" };
+    const url = `${baseAdminSettingsNotifications}/${id}`;
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return ApiCallDelete(url, headers);
+  },
+
   bettingUpdateProfile: async (payload, profileImageFile = null) => {
     const token = sessionStorage.getItem("token");
     const { baseBettingAuth, bettingUpdateProfile } = ApiConfig;

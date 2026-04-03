@@ -444,30 +444,8 @@ export default function UsersPage() {
       </Card>
       {err ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{err}</div> : null}
 
-      <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-md dark:border-zinc-800 dark:bg-zinc-900">
-        <CustomDataTable
-          columns={columns}
-          data={userListData}
-          pagination={false}
-          persistTableHead
-          progressPending={loading}
-          customStyles={{
-            headRow: {
-              style: {
-                backgroundColor: 'rgba(0,0,0,0.03)',
-                borderBottom: '1px solid rgb(229 231 235)',
-                color: 'inherit',
-              },
-            },
-            rows: {
-              style: {
-                backgroundColor: 'transparent',
-                borderBottom: '1px solid rgb(243 244 246 / 0.85)',
-                color: 'inherit',
-              },
-            },
-          }}
-        />
+      <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-md dark:border-zinc-700 dark:bg-zinc-900">
+        <CustomDataTable columns={columns} data={userListData} pagination={false} persistTableHead progressPending={loading} />
       </div>
 
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

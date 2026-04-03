@@ -8,6 +8,7 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Badge from '../components/ui/Badge';
 import DataTable, { TBody, Td, Th, THead, Tr } from '../components/ui/DataTable';
+import { DataTableSkeleton, MediaRowCardSkeleton } from '../components/ui/Skeleton';
 import PaginationBar from '../components/ui/PaginationBar';
 import MediaThumb from '../components/ui/MediaThumb';
 import { contentThumbUrl } from '../lib/placeholders';
@@ -156,16 +157,7 @@ export default function ReelsPage() {
     <PageShell>
       <PageHeader title="Reels" description="Short videos — list, moderate, restore, or delete via admin API." />
       <Card className="shadow-lg" padding="p-4">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">
-            Author user id
-            <input
-              value={userFilter}
-              onChange={(e) => setUserFilter(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
-              placeholder="Filter by userId"
-            />
-          </label>
+        <div>
           <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">
             Search (this page)
             <input
@@ -175,42 +167,6 @@ export default function ReelsPage() {
               placeholder="Caption, author, or reel id"
             />
           </label>
-          <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">
-            Status
-            <input
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
-              placeholder="e.g. active, hidden"
-            />
-          </label>
-          <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">
-            From
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
-            />
-          </label>
-          <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">
-            To
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100"
-            />
-          </label>
-          <div className="flex items-end">
-            <button
-              type="button"
-              onClick={() => load(1)}
-              className="w-full rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:bg-blue-700"
-            >
-              Apply
-            </button>
-          </div>
         </div>
       </Card>
 
@@ -233,11 +189,7 @@ export default function ReelsPage() {
           </THead>
           <TBody>
             {loading ? (
-              <Tr>
-                <Td colSpan={5} className="py-8 text-center text-gray-500">
-                  Loading…
-                </Td>
-              </Tr>
+              <DataTableSkeleton rows={8} cols={5} />
             ) : rows.length === 0 ? (
               <Tr>
                 <Td colSpan={5} className="py-8 text-center text-gray-500">
@@ -332,9 +284,7 @@ export default function ReelsPage() {
 
       <div className="space-y-3 md:hidden">
         {loading ? (
-          <Card className="shadow-md" padding="p-6">
-            <p className="text-center text-sm text-gray-500 dark:text-zinc-400">Loading…</p>
-          </Card>
+          <MediaRowCardSkeleton count={5} />
         ) : rows.length === 0 ? (
           <Card className="shadow-md" padding="p-6">
             <p className="text-center text-sm text-gray-500 dark:text-zinc-400">No reels found.</p>
@@ -424,10 +374,6 @@ export default function ReelsPage() {
         }
       >
         <form id="moderate-reel-form" className="space-y-3" onSubmit={submitModerate}>
-          <p className="text-sm text-gray-600 dark:text-zinc-400">
-            Sends <span className="font-medium text-gray-900 dark:text-zinc-100">PUT …/reels/:id/moderate</span> with{' '}
-            <span className="font-medium">isHidden / isSensitive / isRestricted</span>.
-          </p>
           {[
             ['hidden', 'Hidden (not visible in feed)'],
             ['sensitive', 'Sensitive / NSFW'],

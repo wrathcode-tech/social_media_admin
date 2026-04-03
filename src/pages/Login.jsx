@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import Button from '../components/ui/Button';
+import BrandLogo from '../components/ui/BrandLogo';
 import { TextField } from '../components/ui/TextField';
 import { alertErrorMessage, alertSuccessMessage } from '../utils/snackbarUtils';
 
@@ -14,10 +15,12 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const pwdId = useId();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       const ok = await login(email, password);
       if (!ok) {
@@ -28,6 +31,8 @@ export default function Login() {
       alertSuccessMessage('Signed in');
     } catch (error) {
       alertErrorMessage(error?.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -57,13 +62,11 @@ export default function Login() {
       <div className="relative flex min-h-screen flex-col items-center justify-center p-4 sm:p-6">
         <div className="w-full max-w-[420px]">
           <div className="rounded-2xl border border-gray-200/90 bg-white/95 p-6 shadow-xl shadow-gray-200/50 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/95 dark:shadow-none sm:p-8">
-            <div className="mb-8 flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-sm font-bold text-white shadow-md">
-                GF
-              </div>
-              <div className="min-w-0 flex-1 pt-0.5">
-                <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-zinc-50">GTBS Flicksy</h1>
-                <p className="mt-2 text-sm text-gray-600 dark:text-zinc-400">Sign in with your admin account.</p>
+            <div className="mb-8 space-y-4">
+              <BrandLogo className="h-10 w-full max-w-[14rem]" />
+              <div>
+                <h1 className="text-lg font-semibold tracking-tight text-gray-900 dark:text-zinc-50">Admin sign in</h1>
+                <p className="mt-1.5 text-sm text-gray-600 dark:text-zinc-400">Use your admin account credentials.</p>
               </div>
             </div>
 
@@ -132,8 +135,13 @@ export default function Login() {
                 </div>
               </div>
 
-              <Button type="submit" variant="primary" className="w-full py-3 shadow-md">
-                {true ? (
+              <Button
+                type="submit"
+                variant="primary"
+                className="w-full py-3 shadow-md"
+                disabled={submitting}
+              >
+                {submitting ? (
                   <span className="inline-flex items-center gap-2">
                     <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden>
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />

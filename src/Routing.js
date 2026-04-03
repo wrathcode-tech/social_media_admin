@@ -6,6 +6,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminShell from './components/layout/AdminShell';
+import { Skeleton } from './components/ui/Skeleton';
 
 const Login = lazyWithRetry(() => import('./pages/Login'));
 const DashboardPage = lazyWithRetry(() => import('./pages/DashboardPage'));
@@ -16,6 +17,7 @@ const PostDetailPage = lazyWithRetry(() => import('./pages/PostDetailPage'));
 const ReelsPage = lazyWithRetry(() => import('./pages/ReelsPage'));
 const ReelDetailPage = lazyWithRetry(() => import('./pages/ReelDetailPage'));
 const StoriesPage = lazyWithRetry(() => import('./pages/StoriesPage'));
+const StoryDetailPage = lazyWithRetry(() => import('./pages/StoryDetailPage'));
 const CommentsPage = lazyWithRetry(() => import('./pages/CommentsPage'));
 const ReportsPage = lazyWithRetry(() => import('./pages/ReportsPage'));
 const NotificationsPage = lazyWithRetry(() => import('./pages/NotificationsPage'));
@@ -28,8 +30,16 @@ const SettingsPage = lazyWithRetry(() => import('./pages/SettingsPage'));
 
 function RouteFallback() {
   return (
-    <div className="flex min-h-[40vh] items-center justify-center text-sm text-gray-500 dark:text-zinc-400">
-      Loading…
+    <div
+      className="flex min-h-[40vh] flex-col items-center justify-center gap-4 px-4"
+      role="status"
+      aria-label="Loading page"
+    >
+      <div className="w-full max-w-md space-y-3">
+        <Skeleton className="mx-auto h-8 w-48 rounded-lg" />
+        <Skeleton className="h-4 w-full rounded" />
+        <Skeleton className="mx-auto h-4 w-5/6 rounded" />
+      </div>
     </div>
   );
 }
@@ -52,6 +62,7 @@ const Routing = memo(function Routing() {
                   <Route path="posts" element={<PostsPage />} />
                   <Route path="reels/:reelId" element={<ReelDetailPage />} />
                   <Route path="reels" element={<ReelsPage />} />
+                  <Route path="stories/:storyId" element={<StoryDetailPage />} />
                   <Route path="stories" element={<StoriesPage />} />
                   <Route path="comments" element={<CommentsPage />} />
                   <Route path="reports" element={<ReportsPage />} />
