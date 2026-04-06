@@ -9,6 +9,7 @@ import MediaThumb from '../components/ui/MediaThumb';
 import { ContentDetailPageSkeleton } from '../components/ui/Skeleton';
 import { contentThumbUrl } from '../lib/placeholders';
 import { useToast } from '../context/ToastContext';
+import { confirmDestructive } from '../utils/confirmDestructive';
 import { deriveModerationFlags } from './postsUtils';
 import { parseStoryFromGetResponse, storyListPreview, storyRowId } from './storiesUtils';
 
@@ -82,7 +83,13 @@ export default function StoryDetailPage() {
     null;
 
   const doDelete = async () => {
-    if (!storyId || !window.confirm('Permanently delete this story?')) return;
+    if (!storyId) return;
+    const ok = await confirmDestructive({
+      title: 'Permanently delete this story?',
+      text: 'This cannot be undone.',
+      confirmButtonText: 'Yes, delete',
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       const res = await AuthService.adminDeleteStory(storyId);

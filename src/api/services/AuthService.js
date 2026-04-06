@@ -31,7 +31,17 @@ const AuthService = {
     const { baseAdminDashboard, userList } = ApiConfig;
     const q = new URLSearchParams({ page: String(page), limit: String(limit) });
     if (String(search).trim()) q.set('search', String(search).trim());
-    if (status) q.set('status', status);
+    if (status) {
+      q.set('status', status);
+      // Backends often filter on booleans instead of (or in addition to) status text.
+      if (status === 'blocked') {
+        q.set('isBanned', 'true');
+        q.set('banned', 'true');
+      } else if (status === 'active') {
+        q.set('isBanned', 'false');
+        q.set('banned', 'false');
+      }
+    }
     const url = `${baseAdminDashboard}${userList}?${q}`;
     const headers = { "Content-Type": "application/json" };
     if (token) headers.Authorization = `Bearer ${token}`;

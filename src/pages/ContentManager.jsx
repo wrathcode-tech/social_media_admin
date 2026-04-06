@@ -14,6 +14,7 @@ import Badge from '../components/ui/Badge';
 import PaginationBar from '../components/ui/PaginationBar';
 import MediaThumb from '../components/ui/MediaThumb';
 import { contentThumbUrl } from '../lib/placeholders';
+import { confirmDestructive } from '../utils/confirmDestructive';
 
 function fmtDateTime(v) {
   if (v == null || v === '') return '—';
@@ -72,7 +73,12 @@ export default function ContentManager({ title, description, segment, showSensit
   };
 
   const del = async (id) => {
-    if (!window.confirm('Delete this item?')) return;
+    const ok = await confirmDestructive({
+      title: 'Delete this item?',
+      text: 'This removes the content from the catalog. This cannot be undone.',
+      confirmButtonText: 'Yes, delete',
+    });
+    if (!ok) return;
     try {
       await adminDeleteContent(segment, id);
       setRows((r) => r.filter((x) => x._id !== id));

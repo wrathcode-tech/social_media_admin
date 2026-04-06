@@ -13,6 +13,7 @@ import PaginationBar from '../components/ui/PaginationBar';
 import MediaThumb from '../components/ui/MediaThumb';
 import { contentThumbUrl, userAvatarUrl } from '../lib/placeholders';
 import { useToast } from '../context/ToastContext';
+import { confirmDestructive } from '../utils/confirmDestructive';
 import {
   deriveModerationFlags,
   filterPostsClientSide,
@@ -94,6 +95,14 @@ export default function PostsPage() {
   const submitModerate = async (e) => {
     e.preventDefault();
     if (!moderateTargetId) return;
+    const ok = await confirmDestructive({
+      title: 'Apply moderation changes?',
+      text: 'Updates hidden, sensitive, and restricted settings for this post.',
+      confirmButtonText: 'Save changes',
+      confirmButtonColor: '#2563eb',
+      icon: 'question',
+    });
+    if (!ok) return;
     setModerateSaving(true);
     try {
       const res = await AuthService.adminModeratePost(moderateTargetId, {
@@ -128,7 +137,12 @@ export default function PostsPage() {
   };
 
   const del = async (id) => {
-    if (!window.confirm('Permanently delete this post?')) return;
+    const ok = await confirmDestructive({
+      title: 'Permanently delete this post?',
+      text: 'This cannot be undone.',
+      confirmButtonText: 'Yes, delete',
+    });
+    if (!ok) return;
     try {
       const res = await AuthService.adminDeletePost(id);
       if (res && typeof res === 'object' && res.success === false) {

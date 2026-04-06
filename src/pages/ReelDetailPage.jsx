@@ -10,6 +10,7 @@ import MediaThumb from '../components/ui/MediaThumb';
 import { ContentDetailPageSkeleton } from '../components/ui/Skeleton';
 import { contentThumbUrl } from '../lib/placeholders';
 import { useToast } from '../context/ToastContext';
+import { confirmDestructive } from '../utils/confirmDestructive';
 import { deriveModerationFlags, parseReelFromGetResponse, reelListPreview, reelRowId } from './reelsUtils';
 
 function fmtDateTime(v) {
@@ -75,6 +76,14 @@ export default function ReelDetailPage() {
   const submitModerate = async (e) => {
     e.preventDefault();
     if (!reelId) return;
+    const ok = await confirmDestructive({
+      title: 'Apply moderation changes?',
+      text: 'Updates hidden, sensitive, and restricted settings for this reel.',
+      confirmButtonText: 'Save changes',
+      confirmButtonColor: '#2563eb',
+      icon: 'question',
+    });
+    if (!ok) return;
     setModerateSaving(true);
     try {
       const res = await AuthService.adminModerateReel(reelId, {
@@ -113,7 +122,13 @@ export default function ReelDetailPage() {
   };
 
   const doDelete = async () => {
-    if (!reelId || !window.confirm('Permanently delete this reel?')) return;
+    if (!reelId) return;
+    const ok = await confirmDestructive({
+      title: 'Permanently delete this reel?',
+      text: 'This cannot be undone.',
+      confirmButtonText: 'Yes, delete',
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       const res = await AuthService.adminDeleteReel(reelId);

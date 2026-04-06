@@ -10,6 +10,7 @@ import MediaThumb from '../components/ui/MediaThumb';
 import { ContentDetailPageSkeleton } from '../components/ui/Skeleton';
 import { contentThumbUrl } from '../lib/placeholders';
 import { useToast } from '../context/ToastContext';
+import { confirmDestructive } from '../utils/confirmDestructive';
 import { deriveModerationFlags, parsePostFromGetResponse, postListPreview, postRowId } from './postsUtils';
 
 function fmtDateTime(v) {
@@ -75,6 +76,14 @@ export default function PostDetailPage() {
   const submitModerate = async (e) => {
     e.preventDefault();
     if (!postId) return;
+    const ok = await confirmDestructive({
+      title: 'Apply moderation changes?',
+      text: 'Updates hidden, sensitive, and restricted settings for this post.',
+      confirmButtonText: 'Save changes',
+      confirmButtonColor: '#2563eb',
+      icon: 'question',
+    });
+    if (!ok) return;
     setModerateSaving(true);
     try {
       const res = await AuthService.adminModeratePost(postId, {
@@ -113,7 +122,13 @@ export default function PostDetailPage() {
   };
 
   const doDelete = async () => {
-    if (!postId || !window.confirm('Permanently delete this post?')) return;
+    if (!postId) return;
+    const ok = await confirmDestructive({
+      title: 'Permanently delete this post?',
+      text: 'This cannot be undone.',
+      confirmButtonText: 'Yes, delete',
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       const res = await AuthService.adminDeletePost(postId);

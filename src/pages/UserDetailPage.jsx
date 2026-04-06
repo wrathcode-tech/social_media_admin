@@ -9,6 +9,7 @@ import Badge from '../components/ui/Badge';
 import Modal from '../components/ui/Modal';
 import { TextField } from '../components/ui/TextField';
 import { useToast } from '../context/ToastContext';
+import { confirmDestructive } from '../utils/confirmDestructive';
 import MediaThumb from '../components/ui/MediaThumb';
 import { UserDetailPageSkeleton } from '../components/ui/Skeleton';
 import { userAvatarUrl } from '../lib/placeholders';
@@ -230,6 +231,14 @@ export default function UserDetailPage() {
   const submitRestrict = async (e) => {
     e.preventDefault();
     if (!userId) return;
+    const ok = await confirmDestructive({
+      title: 'Apply restriction changes?',
+      text: 'This updates what this user can post, message, create as reels, or stories.',
+      confirmButtonText: 'Save changes',
+      confirmButtonColor: '#2563eb',
+      icon: 'question',
+    });
+    if (!ok) return;
     setRestrictSaving(true);
     try {
       const res = await AuthService.adminPutUserRestrict(userId, restrictDraft);
@@ -250,6 +259,13 @@ export default function UserDetailPage() {
   const submitBan = async (e) => {
     e.preventDefault();
     if (!userId) return;
+    const ok = await confirmDestructive({
+      title: 'Ban this user?',
+      text: 'They will be blocked from the platform with the reason you entered.',
+      confirmButtonText: 'Yes, ban user',
+      confirmButtonColor: '#d97706',
+    });
+    if (!ok) return;
     setBanSubmitting(true);
     try {
       const reason = banReason.trim() || 'Violated community guidelines';
@@ -362,6 +378,14 @@ export default function UserDetailPage() {
                 type="button"
                 disabled={banSubmitting}
                 onClick={async () => {
+                  const ok = await confirmDestructive({
+                    title: 'Unban this user?',
+                    text: 'They will regain access according to your server rules.',
+                    confirmButtonText: 'Yes, unban',
+                    confirmButtonColor: '#16a34a',
+                    icon: 'question',
+                  });
+                  if (!ok) return;
                   setBanSubmitting(true);
                   try {
                     const res = await AuthService.adminPutUserBan(userId, { banned: false });
@@ -411,7 +435,12 @@ export default function UserDetailPage() {
               variant="danger"
               type="button"
               onClick={async () => {
-                if (!window.confirm('Delete this account?')) return;
+                const ok = await confirmDestructive({
+                  title: 'Delete this account?',
+                  text: 'This permanently removes the user. This cannot be undone.',
+                  confirmButtonText: 'Yes, delete account',
+                });
+                if (!ok) return;
                 try {
                   const res = await AuthService.adminDeleteUser(userId);
                   if (res && typeof res === 'object' && res.success === false) {

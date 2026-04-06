@@ -11,6 +11,8 @@ import { notificationCampaignThumb } from '../lib/placeholders';
 import PaginationBar from '../components/ui/PaginationBar';
 import { NotificationListSkeleton, Skeleton } from '../components/ui/Skeleton';
 import { useToast } from '../context/ToastContext';
+import { confirmDestructive } from '../utils/confirmDestructive';
+import { alertErrorMessage, alertSuccessMessage } from '../utils/snackbarUtils';
 import {
   extractSettingsNotificationsList,
   extractSettingsNotificationsMeta,
@@ -114,18 +116,25 @@ export default function NotificationsPage() {
   };
 
   const remove = async (id) => {
-    if (!id || !window.confirm('Delete this notification?')) return;
+    if (!id) return;
+    const ok = await confirmDestructive({
+      title: 'Delete notification?',
+      text: 'This action cannot be undone.',
+      confirmButtonText: 'Yes, delete',
+    });
+    if (!ok) return;
+
     setDeletingId(id);
     try {
       const res = await AuthService.adminDeleteSettingsNotification(id);
       if (isApiError(res)) {
         throw new Error(res.message || 'Delete failed');
       }
-      toast('Deleted', 'success');
+      alertSuccessMessage('Notification deleted successfully');
       await load(meta.page);
       setErr('');
     } catch (e2) {
-      toast(e2?.message || 'Could not delete', 'error');
+      alertErrorMessage(e2?.message || 'Could not delete');
     } finally {
       setDeletingId('');
     }

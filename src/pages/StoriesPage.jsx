@@ -11,6 +11,7 @@ import MediaThumb from '../components/ui/MediaThumb';
 import Badge from '../components/ui/Badge';
 import { contentThumbUrl } from '../lib/placeholders';
 import { useToast } from '../context/ToastContext';
+import { confirmDestructive } from '../utils/confirmDestructive';
 import { deriveModerationFlags } from './postsUtils';
 import {
   filterStoriesClientSide,
@@ -85,7 +86,12 @@ export default function StoriesPage() {
   const preview = (row) => storyListPreview(row);
 
   const del = async (id) => {
-    if (!window.confirm('Permanently delete this story?')) return;
+    const ok = await confirmDestructive({
+      title: 'Permanently delete this story?',
+      text: 'This cannot be undone.',
+      confirmButtonText: 'Yes, delete',
+    });
+    if (!ok) return;
     try {
       const res = await AuthService.adminDeleteStory(id);
       if (res && typeof res === 'object' && res.success === false) {

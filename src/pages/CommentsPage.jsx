@@ -11,6 +11,7 @@ import { CommentBrowseListSkeleton, CommentThreadSkeleton } from '../components/
 import MediaThumb from '../components/ui/MediaThumb';
 import { contentThumbUrl, userAvatarUrl } from '../lib/placeholders';
 import { useToast } from '../context/ToastContext';
+import { confirmDestructive } from '../utils/confirmDestructive';
 import { normalizePostsListResponse, postListPreview, postListStatsLine, postRowId } from './postsUtils';
 import { normalizeReelsListResponse, reelListPreview, reelRowId } from './reelsUtils';
 import {
@@ -156,7 +157,12 @@ export default function CommentsPage() {
 
   const deleteComment = async (commentId) => {
     if (!urlId || !commentId) return;
-    if (!window.confirm('Delete this comment?')) return;
+    const ok = await confirmDestructive({
+      title: 'Delete this comment?',
+      text: 'This cannot be undone.',
+      confirmButtonText: 'Yes, delete',
+    });
+    if (!ok) return;
     const key = `c:${commentId}`;
     setDeletingKey(key);
     try {
@@ -178,7 +184,12 @@ export default function CommentsPage() {
 
   const deleteReply = async (commentId, replyId) => {
     if (!urlId || !commentId || !replyId) return;
-    if (!window.confirm('Delete this reply?')) return;
+    const ok = await confirmDestructive({
+      title: 'Delete this reply?',
+      text: 'This cannot be undone.',
+      confirmButtonText: 'Yes, delete',
+    });
+    if (!ok) return;
     const key = `r:${commentId}:${replyId}`;
     setDeletingKey(key);
     try {

@@ -88,10 +88,29 @@ function userRowId(u) {
 }
 
 function deriveUserStatus(u) {
-  if (u?.status) return u.status;
-  if (u?.isBanned) return 'blocked';
-  if (u?.isActive === false) return 'inactive';
-  return 'active';
+  if (!u || typeof u !== 'object') return 'active';
+  // Ban flags must win over a stale/default status string from the API.
+  if (u.isBanned === true || u.banned === true) return 'blocked';
+
+  const raw = u.status ?? u.accountStatus ?? u.userStatus ?? u.state;
+  const s = raw != null ? String(raw).trim().toLowerCase() : '';
+  if (s && ['blocked', 'banned', 'ban', 'suspended', 'suspend'].includes(s)) return 'blocked';
+  if (s && (s.includes('bann') || s.includes('suspend'))) return 'blocked';
+
+  if (u.isActive === false || s === 'inactive') return 'inactive';
+  if (!s || s === 'active' || s === 'verified' || s === 'ok') return 'active';
+  return raw != null ? String(raw) : 'active';
+}
+
+/** Align list rows with Status dropdown when the API ignores or mis-sends the filter. */
+function filterUsersByStatusFilter(list, statusFilter) {
+  if (!statusFilter) return list;
+  return list.filter((u) => {
+    const st = deriveUserStatus(u);
+    if (statusFilter === 'blocked') return st === 'blocked';
+    if (statusFilter === 'active') return st !== 'blocked';
+    return true;
+  });
 }
 
 function normalizeAdminUserRow(u) {
@@ -248,7 +267,7 @@ export default function UsersPage() {
           setErr(res?.message || 'Something went wrong');
           return;
         }
-        setUserListData(list);
+        setUserListData(filterUsersByStatusFilter(list, statusFilter));
         setUserListMeta(meta);
         if (meta.total != null && Number.isFinite(Number(meta.total))) {
           setTotalUsers(Number(meta.total));
@@ -307,12 +326,9 @@ export default function UsersPage() {
             >
               {(userRowId(row) || '—').slice(0, 8).toUpperCase()}…
             </Link>
-            <button
-              type="button"
-              aria-label="Copy user id"
+            <button type="button" disabled aria-label="Copy user id"
               className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-              onClick={() => copyId(row)}
-            >
+              onClick={() => copyId(row)}>
               <IconCopy className="h-4 w-4" />
             </button>
           </div>
@@ -379,13 +395,13 @@ export default function UsersPage() {
         sortable: false,
         selector: (row) => fmtDateTime(row.lastLogin ?? row.lastLoginTime),
       },
-      {
-        name: 'Actions',
-        width: '120px',
-        right: true,
-        sortable: false,
-        cell: (row) => <UserListRowActions user={row} onQuickView={setPreview} />,
-      },
+      // {
+      //   name: 'Actions',
+      //   width: '120px',
+      //   right: true,
+      //   sortable: false,
+      //   cell: (row) => <UserListRowActions user={row} onQuickView={setPreview} />,
+      // },
     ];
   }, [currentPage, itemsPerPage, toast]);
 
