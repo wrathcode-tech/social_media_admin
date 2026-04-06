@@ -77,7 +77,7 @@ function TrendBlock({ trend }) {
     return (
       <div className="mt-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-zinc-500">7-day trend</p>
-        <div className="mt-2 overflow-x-auto rounded-xl border border-gray-200 dark:border-zinc-700">
+        <div className="mt-2 hidden overflow-x-auto rounded-xl border border-gray-200 dark:border-zinc-700 md:block">
           <table className="w-full min-w-[240px] text-left text-sm">
             <thead className="bg-gray-50 text-xs text-gray-600 dark:bg-zinc-900 dark:text-zinc-400">
               <tr>
@@ -95,6 +95,17 @@ function TrendBlock({ trend }) {
             </tbody>
           </table>
         </div>
+        <ul className="mt-2 space-y-2 md:hidden">
+          {rows.map((r) => (
+            <li
+              key={r.key}
+              className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            >
+              <span className="font-mono text-xs text-gray-700 dark:text-zinc-300">{r.day}</span>
+              <span className="font-semibold text-gray-900 dark:text-zinc-100">{r.count}</span>
+            </li>
+          ))}
+        </ul>
       </div>
     );
   }

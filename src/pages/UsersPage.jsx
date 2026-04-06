@@ -5,45 +5,13 @@ import PageShell from '../components/ui/PageShell';
 import PageHeader from '../components/ui/PageHeader';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import Modal from '../components/ui/Modal';
 import Badge from '../components/ui/Badge';
 import MediaThumb from '../components/ui/MediaThumb';
 import { userAvatarUrl } from '../lib/placeholders';
 import AuthService from '../api/services/AuthService';
 import CustomDataTable from '../utils/DataTable';
+import { MediaRowCardSkeleton } from '../components/ui/Skeleton';
 import { useToast } from '../context/ToastContext';
-
-function IconEye({ className = 'h-5 w-5' }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-      />
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-      />
-    </svg>
-  );
-}
-
-function IconUserProfile({ className = 'h-5 w-5' }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-      />
-    </svg>
-  );
-}
 
 function IconCopy({ className = 'h-5 w-5' }) {
   return (
@@ -55,30 +23,6 @@ function IconCopy({ className = 'h-5 w-5' }) {
         d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
       />
     </svg>
-  );
-}
-
-function UserListRowActions({ user, onQuickView, align = 'end' }) {
-  const labelBase = user?.username ? `@${user.username}` : 'user';
-  const uid = userRowId(user);
-  return (
-    <div className={`flex items-center gap-1 ${align === 'end' ? 'justify-end' : 'justify-start'}`}>
-      <button
-        type="button"
-        aria-label={`Quick view ${labelBase}`}
-        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-violet-600 transition-colors hover:bg-violet-50 hover:text-violet-700 dark:text-violet-400 dark:hover:bg-violet-950/40 dark:hover:text-violet-300"
-        onClick={() => onQuickView(user)}
-      >
-        <IconEye />
-      </button>
-      <Link
-        to={`/users/${uid}`}
-        aria-label={`Open profile ${labelBase}`}
-        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-950/40 dark:hover:text-blue-300"
-      >
-        <IconUserProfile />
-      </Link>
-    </div>
   );
 }
 
@@ -234,7 +178,6 @@ export default function UsersPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
-  const [preview, setPreview] = useState(null);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 500);
@@ -326,9 +269,12 @@ export default function UsersPage() {
             >
               {(userRowId(row) || '—').slice(0, 8).toUpperCase()}…
             </Link>
-            <button type="button" disabled aria-label="Copy user id"
+            <button
+              type="button"
+              aria-label="Copy user id"
               className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-              onClick={() => copyId(row)}>
+              onClick={() => copyId(row)}
+            >
               <IconCopy className="h-4 w-4" />
             </button>
           </div>
@@ -395,13 +341,6 @@ export default function UsersPage() {
         sortable: false,
         selector: (row) => fmtDateTime(row.lastLogin ?? row.lastLoginTime),
       },
-      // {
-      //   name: 'Actions',
-      //   width: '120px',
-      //   right: true,
-      //   sortable: false,
-      //   cell: (row) => <UserListRowActions user={row} onQuickView={setPreview} />,
-      // },
     ];
   }, [currentPage, itemsPerPage, toast]);
 
@@ -460,8 +399,107 @@ export default function UsersPage() {
       </Card>
       {err ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{err}</div> : null}
 
-      <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-md dark:border-zinc-700 dark:bg-zinc-900">
+      <div className="hidden overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-md dark:border-zinc-700 dark:bg-zinc-900 md:block">
         <CustomDataTable columns={columns} data={userListData} pagination={false} persistTableHead progressPending={loading} />
+      </div>
+
+      <div className="space-y-3 md:hidden">
+        {loading ? (
+          <MediaRowCardSkeleton count={5} />
+        ) : userListData.length === 0 ? (
+          <Card className="shadow-md" padding="p-6">
+            <p className="text-center text-sm text-gray-500 dark:text-zinc-400">No users on this page.</p>
+          </Card>
+        ) : (
+          userListData.map((row) => {
+            const id = userRowId(row);
+            const copyId = async () => {
+              if (!id) return;
+              try {
+                await navigator.clipboard.writeText(id);
+                toast('User ID copied', 'success');
+              } catch {
+                toast('Could not copy', 'error');
+              }
+            };
+            return (
+              <Card key={id || row.email} className="shadow-md" padding="p-4">
+                <div className="flex gap-3">
+                  <MediaThumb
+                    src={userAvatarUrl(row)}
+                    className="h-12 w-12 shrink-0 rounded-xl border border-gray-200 dark:border-zinc-600"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {id ? (
+                        <Link
+                          to={`/users/${id}`}
+                          className="text-base font-semibold text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                          @{row.username || '—'}
+                        </Link>
+                      ) : (
+                        <span className="text-base font-semibold text-gray-900 dark:text-zinc-100">@{row.username || '—'}</span>
+                      )}
+                      <Badge className="capitalize">{row.status}</Badge>
+                    </div>
+                    {row.fullName ? (
+                      <p className="mt-0.5 text-sm text-gray-600 dark:text-zinc-400">{row.fullName}</p>
+                    ) : null}
+                    <p className="mt-1 break-all text-xs text-gray-600 dark:text-zinc-400">{row.email || '—'}</p>
+                    {id ? (
+                      <p className="mt-1 font-mono text-[10px] text-gray-400 dark:text-zinc-500">{id}</p>
+                    ) : null}
+                  </div>
+                </div>
+                <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-gray-100 pt-3 text-xs dark:border-zinc-800">
+                  <div>
+                    <dt className="text-gray-500 dark:text-zinc-500">Followers</dt>
+                    <dd className="font-medium text-gray-900 dark:text-zinc-100">
+                      {row.followersCount != null ? Number(row.followersCount).toLocaleString() : '—'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500 dark:text-zinc-500">Following</dt>
+                    <dd className="font-medium text-gray-900 dark:text-zinc-100">
+                      {row.followingCount != null ? Number(row.followingCount).toLocaleString() : '—'}
+                    </dd>
+                  </div>
+                  <div className="col-span-2">
+                    <dt className="text-gray-500 dark:text-zinc-500">Joined</dt>
+                    <dd className="font-medium text-gray-900 dark:text-zinc-100">{fmtDateTime(row.createdAt)}</dd>
+                  </div>
+                  <div className="col-span-2">
+                    <dt className="text-gray-500 dark:text-zinc-500">Last login</dt>
+                    <dd className="font-medium text-gray-900 dark:text-zinc-100">
+                      {fmtDateTime(row.lastLogin ?? row.lastLoginTime)}
+                    </dd>
+                  </div>
+                </dl>
+                <div className="mt-3 flex flex-wrap gap-2 border-t border-gray-100 pt-3 dark:border-zinc-800">
+                  {id ? (
+                    <Link
+                      to={`/users/${id}`}
+                      className="inline-flex rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                    >
+                      View profile
+                    </Link>
+                  ) : null}
+                  {id ? (
+                    <button
+                      type="button"
+                      onClick={copyId}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                    >
+                      <IconCopy className="h-4 w-4" />
+                      Copy ID
+                    </button>
+                  ) : null}
+                </div>
+              </Card>
+            );
+          })
+        )}
       </div>
 
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -500,43 +538,6 @@ export default function UsersPage() {
           disabledClassName="pointer-events-none opacity-40"
         />
       </div>
-
-      <Modal
-        open={!!preview}
-        onClose={() => setPreview(null)}
-        title={preview ? `@${preview.username}` : ''}
-        footer={
-          preview ? (
-            <div className="flex flex-wrap justify-end gap-2">
-              <Button variant="secondary" type="button" onClick={() => setPreview(null)}>
-                Close
-              </Button>
-              <Button variant="primary" as={Link} to={`/users/${userRowId(preview)}`} onClick={() => setPreview(null)}>
-                Full profile
-              </Button>
-            </div>
-          ) : null
-        }
-      >
-        {preview ? (
-          <div className="flex gap-4 border-b border-gray-100 pb-4 dark:border-zinc-800">
-            <MediaThumb
-              src={userAvatarUrl(preview)}
-              className="h-14 w-14 shrink-0 rounded-2xl border border-gray-200 dark:border-zinc-600"
-            />
-            <dl className="grid flex-1 gap-2 text-sm sm:grid-cols-2">
-              <dt className="text-gray-500 dark:text-zinc-400">Email</dt>
-              <dd className="font-medium text-gray-900 dark:text-zinc-100">{preview.email}</dd>
-              <dt className="text-gray-500 dark:text-zinc-400">Followers</dt>
-              <dd className="tabular-nums font-semibold">{preview.followersCount?.toLocaleString?.()}</dd>
-              <dt className="text-gray-500 dark:text-zinc-400">Status</dt>
-              <dd>
-                <Badge>{preview.status}</Badge>
-              </dd>
-            </dl>
-          </div>
-        ) : null}
-      </Modal>
     </PageShell>
   );
 }

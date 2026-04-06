@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { adminGetAds, adminPatchAdApprove, adminPostAd } from '../services/adminQueries';
+import { adminGetAds, adminPatchAdApprove, adminPostAd } from '../api/adminQueries';
 import PageShell from '../components/ui/PageShell';
 import PageHeader from '../components/ui/PageHeader';
 import Card from '../components/ui/Card';

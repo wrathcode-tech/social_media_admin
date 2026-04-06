@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { adminGetAdPaymentRequests, adminPatchAdPaymentRequest } from '../services/adminQueries';
+import { adminGetAdPaymentRequests, adminPatchAdPaymentRequest } from '../api/adminQueries';
 import PageShell from '../components/ui/PageShell';
 import PageHeader from '../components/ui/PageHeader';
 import Card from '../components/ui/Card';

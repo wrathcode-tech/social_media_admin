@@ -18,7 +18,6 @@ import {
   extractSettingsNotificationsMeta,
   settingsNotificationRowId,
 } from './settingsNotificationsUtils';
-import './NotificationsPage.css';
 
 const TYPE_OPTIONS = [{ value: 'all', label: 'All users', hint: 'Broadcast' }];
 
@@ -155,13 +154,13 @@ export default function NotificationsPage() {
         </div>
       ) : null}
 
-      <div >
+      <div className="space-y-4">
         <Card className="shadow-lg lg:col-span-7" padding="p-0">
-          <div className="border-b border-gray-100 px-5 py-4 dark:border-zinc-800">
+          <div className="border-b border-gray-100 px-4 py-3 dark:border-zinc-800 sm:px-5 sm:py-4">
             <h2 className="text-base font-semibold text-gray-900 dark:text-zinc-50">New notification</h2>
             <p className="mt-0.5 text-sm text-gray-500 dark:text-zinc-400">POST payload: title, body, type, data.</p>
           </div>
-          <form onSubmit={create} className="space-y-5 px-5 py-5">
+          <form onSubmit={create} className="space-y-5 px-4 py-4 sm:px-5 sm:py-5">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-zinc-500">Audience</p>
               <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -222,7 +221,7 @@ export default function NotificationsPage() {
       </div>
 
       <Card className="shadow-lg" padding="p-0">
-        <div className="flex flex-col gap-1 border-b border-gray-100 px-5 py-4 sm:flex-row sm:items-end sm:justify-between dark:border-zinc-800">
+        <div className="flex flex-col gap-1 border-b border-gray-100 px-4 py-3 sm:flex-row sm:items-end sm:justify-between sm:px-5 sm:py-4 dark:border-zinc-800">
           <div>
             <h2 className="text-base font-semibold text-gray-900 dark:text-zinc-50">Notifications</h2>
             <p className="text-sm text-gray-500 dark:text-zinc-400">
@@ -238,7 +237,9 @@ export default function NotificationsPage() {
         {listLoading && rows.length === 0 ? (
           <NotificationListSkeleton rows={6} />
         ) : rows.length === 0 ? (
-          <p className="px-5 py-12 text-center text-sm text-gray-500 dark:text-zinc-400">No notifications yet.</p>
+          <p className="px-4 py-10 text-center text-sm text-gray-500 dark:text-zinc-400 sm:px-5 sm:py-12">
+            No notifications yet.
+          </p>
         ) : (
           <ul className="divide-y divide-gray-100 dark:divide-zinc-800">
             {rows.map((r) => {
@@ -247,7 +248,7 @@ export default function NotificationsPage() {
               return (
                 <li
                   key={id || JSON.stringify(r).slice(0, 48)}
-                  className="flex flex-col gap-4 px-5 py-4 transition-colors hover:bg-gray-50/60 dark:hover:bg-zinc-900/40 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-4 px-4 py-4 transition-colors hover:bg-gray-50/60 dark:hover:bg-zinc-900/40 sm:flex-row sm:items-center sm:justify-between sm:px-5"
                 >
                   <div className="flex min-w-0 flex-1 gap-4">
                     <MediaThumb

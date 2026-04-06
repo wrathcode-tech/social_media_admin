@@ -2,7 +2,7 @@ import Button from './Button';
 
 export default function PaginationBar({ page, pages, onPageChange, disabled }) {
   return (
-    <div className="flex flex-wrap items-center gap-4 px-4 py-3">
+    <div className="flex flex-wrap items-center justify-center gap-2 px-2 py-3 sm:justify-start sm:gap-4 sm:px-4">
       <Button type="button" variant="secondary" disabled={disabled || page <= 1} onClick={() => onPageChange(page - 1)}>
         Previous
       </Button>

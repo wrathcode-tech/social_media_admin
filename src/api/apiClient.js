@@ -35,13 +35,3 @@ export async function patchJson(path, body, config) {
   const { data } = await apiClient.patch(path, body, config);
   return data;
 }
-
-export async function putJson(path, body, config) {
-  const { data } = await apiClient.put(path, body, config);
-  return data;
-}
-
-export async function deleteJson(path, config) {
-  const { data } = await apiClient.delete(path, config);
-  return data;
-}

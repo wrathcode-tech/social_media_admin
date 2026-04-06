@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { adminPostUserAdCredit } from '../services/adminQueries';
+import { adminPostUserAdCredit } from '../api/adminQueries';
 import AuthService from '../api/services/AuthService';
 import PageShell from '../components/ui/PageShell';
 import Card from '../components/ui/Card';

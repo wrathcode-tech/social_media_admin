@@ -4,10 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { adminNavSections } from '../../config/adminNav';
 import CommandPalette from '../ui/CommandPalette';
-import Badge from '../ui/Badge';
-import MediaThumb from '../ui/MediaThumb';
 import BrandLogo from '../ui/BrandLogo';
-import { userAvatarUrl } from '../../lib/placeholders';
 
 function NavGroup({ label, pathPrefix, children, onPick }) {
   const location = useLocation();
@@ -75,14 +72,8 @@ export default function AdminShell() {
   const { session, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
-  const [userMenu, setUserMenu] = useState(false);
-  const userMenuRef = useRef(null);
-
-  const crumb =
-    location.pathname === '/' ? 'Dashboard' : location.pathname.replace(/\//g, ' ').replace(/^\s+/, '').trim() || 'Dashboard';
 
   useEffect(() => {
     const onKey = (e) => {
@@ -95,19 +86,8 @@ export default function AdminShell() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  useEffect(() => {
-    if (!userMenu) return;
-    const close = (e) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) setUserMenu(false);
-    };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
-  }, [userMenu]);
-
-  const roleLabel = session?.role ? String(session.role).replace(/_/g, ' ') : 'Admin';
-
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-50 via-gray-100 to-gray-100 text-gray-900 dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-950 dark:text-zinc-100">
+    <div className="min-h-[100dvh] overflow-x-hidden bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-50 via-gray-100 to-gray-100 text-gray-900 dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-950 dark:text-zinc-100">
       <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
 
       <button
@@ -119,15 +99,15 @@ export default function AdminShell() {
       />
 
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen w-64 flex-col border-r border-gray-200/80 bg-white/95 shadow-xl shadow-gray-200/40 backdrop-blur-md transition-transform duration-200 ease-in-out dark:border-zinc-800 dark:bg-zinc-900/95 dark:shadow-none lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed left-0 top-0 z-50 flex h-[100dvh] max-h-[100dvh] w-[min(17rem,calc(100vw-2.5rem))] flex-col border-r border-gray-200/80 bg-white/95 pt-[env(safe-area-inset-top,0px)] shadow-xl shadow-gray-200/40 backdrop-blur-md transition-transform duration-200 ease-in-out dark:border-zinc-800 dark:bg-zinc-900/95 dark:shadow-none sm:w-64 lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
       >
-        <div className="border-b border-gray-200/80 px-4 py-5 dark:border-zinc-800">
+        <div className="border-b border-gray-200/80 px-3 py-4 dark:border-zinc-800 sm:px-4 sm:py-5">
           <div className="flex flex-col gap-2">
             <BrandLogo className="h-9 w-full max-w-[11rem]" />
           </div>
         </div>
-        <nav className="flex flex-1 flex-col gap-4 overflow-y-auto p-3">
+        <nav className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain p-2.5 sm:p-3">
           {adminNavSections.map((section) => (
             <div key={section.title}>
               <div className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-zinc-500">
@@ -164,59 +144,48 @@ export default function AdminShell() {
             </div>
           ))}
         </nav>
-        <div className="border-t border-gray-200/80 p-3 dark:border-zinc-800">
+        <div className="border-t border-gray-200/80 p-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] dark:border-zinc-800 sm:p-3">
           <button
             type="button"
-            onClick={() => setCmdOpen(true)}
-            className="flex w-full items-center gap-2 rounded-xl border border-gray-200 bg-gray-50/80 px-3 py-2 text-left text-xs text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-100 dark:border-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-400 dark:hover:bg-zinc-800"
+            onClick={() => {
+              logout();
+              navigate('/login');
+              setMobileOpen(false);
+            }}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200/80 bg-red-50/80 px-3 py-2.5 text-sm font-medium text-red-700 transition-colors hover:border-red-300 hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-950/50"
           >
-            <svg className="h-3.5 w-3.5 shrink-0 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
-            <span className="flex-1 truncate">Search pages…</span>
-            <kbd className="rounded border border-gray-200 bg-white px-1.5 py-0.5 font-mono text-[10px] dark:border-zinc-600 dark:bg-zinc-900">⌘K</kbd>
+            Sign out
           </button>
         </div>
       </aside>
 
-      <div className="flex min-h-screen flex-col lg:pl-64">
-        <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-gray-200/80 bg-white/80 px-4 py-3 shadow-sm backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/80 md:px-6">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            <button
-              type="button"
-              className="inline-flex rounded-xl border border-gray-200 p-2 text-gray-700 transition-colors duration-200 ease-in-out hover:bg-gray-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800 lg:hidden"
-              onClick={() => setMobileOpen((o) => !o)}
-              aria-expanded={mobileOpen}
+      <div className="flex min-h-[100dvh] min-w-0 flex-col lg:pl-64">
+        <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-gray-200/80 bg-white/80 px-3 py-2.5 shadow-sm backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/80 sm:gap-3 sm:px-4 sm:py-3 md:px-6 pt-[max(0.625rem,env(safe-area-inset-top,0px))]">
+          <button
+            type="button"
+            className="mr-auto inline-flex rounded-xl border border-gray-200 p-2 text-gray-700 transition-colors duration-200 ease-in-out hover:bg-gray-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800 lg:hidden"
+            onClick={() => setMobileOpen((o) => !o)}
+            aria-expanded={mobileOpen}
+          >
+            <span className="sr-only">Menu</span>
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-2 sm:gap-3">
+            <p
+              className="min-w-0 max-w-[min(100%,12rem)] truncate text-xs text-gray-600 dark:text-zinc-300 sm:max-w-[min(100%,20rem)] sm:text-sm"
+              title={session?.email}
             >
-              <span className="sr-only">Menu</span>
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            <nav className="hidden min-w-0 items-center gap-2 text-sm text-gray-500 dark:text-zinc-400 sm:flex" aria-label="Breadcrumb">
-              <span className="font-semibold text-gray-800 dark:text-zinc-200">Console</span>
-              <span className="text-gray-300 dark:text-zinc-600">/</span>
-              <span className="truncate capitalize text-gray-600 dark:text-zinc-300">{crumb}</span>
-            </nav>
-          </div>
-          <div className="flex flex-shrink-0 items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setCmdOpen(true)}
-              className="hidden items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 shadow-sm transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 sm:inline-flex"
-            >
-              <svg className="h-4 w-4 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <span className="text-gray-400">Search</span>
-              <kbd className="ml-1 rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 font-mono text-[10px] text-gray-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-                ⌘K
-              </kbd>
-            </button>
+              {session?.email}
+            </p>
             <button
               type="button"
               onClick={toggleTheme}
-              className="rounded-xl border border-gray-200 p-2.5 text-gray-600 transition-all hover:bg-gray-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              className="shrink-0 rounded-xl border border-gray-200 p-2.5 text-gray-600 transition-all hover:bg-gray-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
               title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
             >
               {theme === 'dark' ? (
@@ -229,60 +198,9 @@ export default function AdminShell() {
                 </svg>
               )}
             </button>
-            <div className="relative" ref={userMenuRef}>
-              <button
-                type="button"
-                onClick={() => setUserMenu((v) => !v)}
-                className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white py-1.5 pl-1.5 pr-3 shadow-sm transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800"
-                aria-expanded={userMenu}
-                aria-haspopup="true"
-              >
-                <MediaThumb
-                  src={userAvatarUrl({
-                    username: session?.name,
-                    email: session?.email,
-                    _id: session?.email,
-                  })}
-                  className="h-9 w-9 shrink-0 rounded-lg border border-gray-200 dark:border-zinc-600"
-                />
-                <span className="hidden max-w-[120px] truncate text-left text-sm font-medium text-gray-800 dark:text-zinc-200 md:block">
-                  {session?.name || session?.email}
-                </span>
-                <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              {userMenu ? (
-                <div
-                  className="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border border-gray-200 bg-white py-2 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
-                  role="menu"
-                >
-                  <div className="border-b border-gray-100 px-3 pb-2 dark:border-zinc-800">
-                    <p className="truncate text-sm font-medium text-gray-900 dark:text-zinc-100">{session?.email}</p>
-                    <div className="mt-1">
-                      <Badge tone="purple" className="text-[10px]">
-                        {roleLabel}
-                      </Badge>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="mt-1 flex w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
-                    onClick={() => {
-                      setUserMenu(false);
-                      logout();
-                      navigate('/login');
-                    }}
-                  >
-                    Sign out
-                  </button>
-                </div>
-              ) : null}
-            </div>
           </div>
         </header>
-        <main className="flex-1 overflow-auto">
+        <main className="min-w-0 flex-1 overflow-x-auto overflow-y-auto pb-[env(safe-area-inset-bottom,0px)]">
           <Outlet />
         </main>
       </div>

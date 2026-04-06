@@ -66,10 +66,10 @@ export default function CommandPalette({ open, onClose }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-start justify-center pt-[12vh] px-4">
+    <div className="fixed inset-0 z-[90] flex items-start justify-center px-3 pt-[max(1rem,env(safe-area-inset-top,0px))] sm:px-4 sm:pt-[12vh]">
       <button type="button" className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm" aria-label="Close" onClick={onClose} />
       <div
-        className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-900"
+        className="relative mt-2 w-full max-h-[min(70dvh,calc(100dvh-2rem))] max-w-lg overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-900 sm:mt-0"
         role="dialog"
         aria-label="Command palette"
       >
@@ -88,7 +88,7 @@ export default function CommandPalette({ open, onClose }) {
             esc
           </kbd>
         </div>
-        <ul className="max-h-[min(50vh,320px)] overflow-y-auto py-2">
+        <ul className="max-h-[min(45dvh,280px)] overflow-y-auto overscroll-contain py-2 sm:max-h-[min(50vh,320px)]">
           {filtered.length === 0 ? (
             <li className="px-4 py-6 text-center text-sm text-gray-500 dark:text-zinc-400">No matches</li>
           ) : (
@@ -97,12 +97,12 @@ export default function CommandPalette({ open, onClose }) {
                 <button
                   type="button"
                   onClick={() => run(it.to)}
-                  className={`flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm transition-colors ${
+                  className={`flex w-full min-w-0 items-center justify-between gap-2 px-3 py-2.5 text-left text-sm transition-colors sm:gap-3 sm:px-4 ${
                     i === idx ? 'bg-blue-50 text-blue-900 dark:bg-blue-950/50 dark:text-blue-100' : 'text-gray-800 dark:text-zinc-200'
                   }`}
                 >
-                  <span className="font-medium">{it.label}</span>
-                  <span className="text-xs text-gray-400 dark:text-zinc-500">{it.section}</span>
+                  <span className="min-w-0 flex-1 truncate font-medium">{it.label}</span>
+                  <span className="shrink-0 text-xs text-gray-400 dark:text-zinc-500">{it.section}</span>
                 </button>
               </li>
             ))
